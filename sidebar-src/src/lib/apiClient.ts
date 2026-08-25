@@ -1,12 +1,14 @@
 // apiClient.ts
 // Cliente fino pras rotas /api/v1/* do app.voeops.com, autenticado com o
-// token de workspace (ver voeToken.ts). Se o token salvo tiver sido
-// revogado (401), descarta e tenta gerar um novo uma vez antes de desistir.
+// token do workspace ATIVO (ver voeToken.ts / workspaceStorage.ts). Se o
+// token salvo tiver sido revogado (401), descarta e tenta gerar um novo
+// uma vez antes de desistir.
 
 import { VOE_API_BASE } from '../config'
 import { clearVoeToken, getVoeToken } from './voeToken'
 import { supabase } from './supabaseClient'
 import { backgroundFetch } from './backgroundFetch'
+import { getActiveWorkspace } from './workspaceStorage'
 
 class ApiError extends Error {
   status: number
@@ -21,7 +23,10 @@ async function request<T>(path: string, init: RequestInit = {}, retrying = false
   const accessToken = sessionData.session?.access_token
   if (!accessToken) throw new ApiError('Sessão expirada, faça login novamente.', 401)
 
-  const voeToken = await getVoeToken(accessToken)
+  const activeWorkspace = await getActiveWorkspace()
+  if (!activeWorkspace) throw new ApiError('Nenhum workspace selecionado.', 400)
+
+  const voeToken = await getVoeToken(accessToken, activeWorkspace.id)
 
   const res = await backgroundFetch(`${VOE_API_BASE}${path}`, {
     ...init,
@@ -33,9 +38,10 @@ async function request<T>(path: string, init: RequestInit = {}, retrying = false
   })
 
   if (res.status === 401 && !retrying) {
-    // Token de workspace pode ter sido revogado manualmente no dashboard —
-    // limpa e tenta uma vez gerar um novo antes de propagar o erro.
-    await clearVoeToken()
+    // Token desse workspace pode ter sido revogado manualmente no
+    // dashboard — limpa e tenta uma vez gerar um novo antes de propagar o
+    // erro.
+    await clearVoeToken(activeWorkspace.id)
     return request<T>(path, init, true)
   }
 

@@ -92,6 +92,66 @@ body {
   padding: 0;
 }
 
+.app-header-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.workspace-name {
+  font-size: 11px;
+  text-align: left;
+}
+
+/* Workspace selector */
+.workspace-selector {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 24px;
+}
+
+.workspace-selector h1 {
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+.workspace-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.workspace-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+  background: #fff;
+  color: #1a1a1a;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 12px 14px;
+  cursor: pointer;
+}
+
+.workspace-card:hover:not(:disabled) {
+  border-color: #1a1a1a;
+}
+
+.workspace-card-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.workspace-card-role {
+  font-size: 12px;
+  color: #888;
+  text-transform: capitalize;
+}
+
 main {
   flex: 1;
   overflow-y: auto;

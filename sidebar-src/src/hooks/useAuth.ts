@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabaseClient'
-import { clearVoeToken } from '../lib/voeToken'
+import { clearAllWorkspaceData } from '../lib/workspaceStorage'
 
 interface UseAuthResult {
   session: Session | null
@@ -42,7 +42,7 @@ export function useAuth(): UseAuthResult {
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut()
-    await clearVoeToken()
+    await clearAllWorkspaceData()
   }, [])
 
   return { session, loading, signIn, signOut }
