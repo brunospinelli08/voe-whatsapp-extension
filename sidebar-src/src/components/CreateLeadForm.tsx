@@ -13,6 +13,29 @@ interface Props {
   onCreated: () => void
 }
 
+interface Stage {
+  id: string
+  order: number
+}
+
+interface Pipeline {
+  id: string
+  is_default: boolean
+  pipeline_stages: Stage[]
+}
+
+/** Acha a primeira etapa (menor `order`) do pipeline padrão do workspace (ou do primeiro pipeline, se nenhum estiver marcado como padrão). */
+async function getDefaultStageId(): Promise<string> {
+  const { data: pipelines } = await voeApi.get<{ data: Pipeline[] }>('/api/v1/pipelines')
+  const pipeline = pipelines.find(p => p.is_default) ?? pipelines[0]
+  if (!pipeline) throw new Error('Nenhum pipeline configurado nesse workspace.')
+
+  const firstStage = [...pipeline.pipeline_stages].sort((a, b) => a.order - b.order)[0]
+  if (!firstStage) throw new Error('Pipeline sem nenhuma etapa configurada.')
+
+  return firstStage.id
+}
+
 export function CreateLeadForm({ chat, existingContactId, onCreated }: Props) {
   const [name, setName] = useState(chat.name ?? '')
   const [creating, setCreating] = useState(false)
@@ -33,15 +56,26 @@ export function CreateLeadForm({ chat, existingContactId, onCreated }: Props) {
         contactId = contact.id
       }
 
+      const stageId = await getDefaultStageId()
+
       const { data: opportunity } = await voeApi.post<{ data: { id: string } }>(
         '/api/v1/opportunities',
-        { name: `${name.trim() || chat.phone} (WhatsApp)`, source: 'whatsapp_extension' },
+        { name: `${name.trim() || chat.phone} (WhatsApp)`, stage_id: stageId },
       )
 
       await voeApi.post(`/api/v1/opportunities/${opportunity.id}/contacts`, {
         contact_id: contactId,
         is_primary_contact: true,
       })
+
+      // Registra a origem na timeline — não existe mais um campo `source`
+      // livre em opportunities (virou origin_id/UTMs), então isso fica
+      // registrado como anotação em vez de tentar mapear pra um dos dois.
+      await voeApi
+        .post(`/api/v1/opportunities/${opportunity.id}/notes`, {
+          content: 'Lead criado a partir da extensão de WhatsApp da VOE.',
+        })
+        .catch(() => {}) // best-effort — não trava a criação do lead se isso falhar
 
       onCreated()
     } catch (err) {
