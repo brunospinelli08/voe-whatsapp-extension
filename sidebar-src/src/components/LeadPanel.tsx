@@ -8,6 +8,7 @@ import { useLeadLookup } from '../hooks/useLeadLookup'
 import { StageSelector } from './StageSelector'
 import { NotesForm } from './NotesForm'
 import { CreateLeadForm } from './CreateLeadForm'
+import { ScheduleVisitForm } from './ScheduleVisitForm'
 
 interface Props {
   chat: ActiveChat
@@ -55,6 +56,7 @@ export function LeadPanel({ chat }: Props) {
           />
 
           <NotesForm opportunityId={opportunity.id} />
+          <ScheduleVisitForm opportunityId={opportunity.id} />
         </div>
       )}
     </div>

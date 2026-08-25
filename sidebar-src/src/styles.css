@@ -150,7 +150,8 @@ button:disabled {
 
 .stage-selector,
 .notes-form,
-.create-lead-form {
+.create-lead-form,
+.schedule-visit-form {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -161,8 +162,14 @@ button:disabled {
 
 .stage-selector label,
 .notes-form label,
-.create-lead-form label {
+.create-lead-form label,
+.schedule-visit-form label {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.schedule-visit-disclaimer {
+  font-weight: 400;
+  margin: 0;
 }
