@@ -149,7 +149,8 @@ button:disabled {
 }
 
 .stage-selector,
-.notes-form {
+.notes-form,
+.create-lead-form {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -159,7 +160,8 @@ button:disabled {
 }
 
 .stage-selector label,
-.notes-form label {
+.notes-form label,
+.create-lead-form label {
   display: flex;
   flex-direction: column;
   gap: 4px;

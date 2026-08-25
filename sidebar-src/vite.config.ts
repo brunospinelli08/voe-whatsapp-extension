@@ -10,6 +10,9 @@ export default defineConfig({
   build: {
     outDir: '../sidebar',
     assetsDir: 'assets',
-    emptyOutDir: false, // não apaga sidebar/ inteira (evita remover arquivos não gerados pelo build, se algum dia existirem)
+    // sidebar/ é 100% gerada pelo build (index.html + assets/) — precisa
+    // limpar antes, senão o Vite acumula JS/CSS antigos a cada build (o
+    // nome do arquivo muda por causa do hash no nome).
+    emptyOutDir: true,
   },
 })

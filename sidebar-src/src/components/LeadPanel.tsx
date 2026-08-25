@@ -1,17 +1,13 @@
 // LeadPanel.tsx
 // Modo Lead: dado o telefone do chat ativo, mostra a oportunidade
-// correspondente (se existir) com etapa do funil e anotações.
-//
-// "Criar lead" (quando não há nenhuma oportunidade vinculada a esse
-// telefone ainda) depende de um endpoint novo em /api/v1/* pra vincular
-// contato <-> oportunidade (opportunity_contacts) — combinado com o Bruno
-// antes de implementar, por mexer numa rota compartilhada com o resto do
-// produto. Até lá, mostramos o estado e deixamos claro o motivo.
+// correspondente (se existir) com etapa do funil e anotações, ou o
+// formulário de criação de lead quando não há nenhuma ainda.
 
 import type { ActiveChat } from '../hooks/useActiveChat'
 import { useLeadLookup } from '../hooks/useLeadLookup'
 import { StageSelector } from './StageSelector'
 import { NotesForm } from './NotesForm'
+import { CreateLeadForm } from './CreateLeadForm'
 
 interface Props {
   chat: ActiveChat
@@ -33,10 +29,7 @@ export function LeadPanel({ chat }: Props) {
       {!loading && searched && !contact && (
         <div className="empty-state">
           <p>Nenhum lead encontrado com esse telefone.</p>
-          <p className="muted">
-            Criar lead direto da sidebar depende de um endpoint novo no backend (vincular
-            contato à oportunidade) — ainda não implementado, aguardando aprovação.
-          </p>
+          <CreateLeadForm chat={chat} onCreated={refetch} />
         </div>
       )}
 
@@ -46,6 +39,7 @@ export function LeadPanel({ chat }: Props) {
             Contato encontrado (<strong>{contact.name || contact.phone}</strong>), mas sem
             nenhuma oportunidade ativa vinculada.
           </p>
+          <CreateLeadForm chat={chat} existingContactId={contact.id} onCreated={refetch} />
         </div>
       )}
 
