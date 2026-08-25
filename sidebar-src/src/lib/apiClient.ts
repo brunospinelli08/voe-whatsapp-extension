@@ -6,6 +6,7 @@
 import { VOE_API_BASE } from '../config'
 import { clearVoeToken, getVoeToken } from './voeToken'
 import { supabase } from './supabaseClient'
+import { backgroundFetch } from './backgroundFetch'
 
 class ApiError extends Error {
   status: number
@@ -22,7 +23,7 @@ async function request<T>(path: string, init: RequestInit = {}, retrying = false
 
   const voeToken = await getVoeToken(accessToken)
 
-  const res = await fetch(`${VOE_API_BASE}${path}`, {
+  const res = await backgroundFetch(`${VOE_API_BASE}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',

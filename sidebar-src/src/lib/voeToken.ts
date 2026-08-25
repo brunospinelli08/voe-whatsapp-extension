@@ -9,6 +9,7 @@
 // que o usuário loga, e reusa esse token daí em diante.
 
 import { VOE_API_BASE } from '../config'
+import { backgroundFetch } from './backgroundFetch'
 
 const STORAGE_KEY = 'voe-ext-api-token'
 const TOKEN_NAME = 'VOE WhatsApp Extension'
@@ -28,7 +29,7 @@ export async function clearVoeToken(): Promise<void> {
 
 /** Gera um novo token de workspace via /api/tokens, usando a sessão do Supabase. */
 async function mintVoeToken(supabaseAccessToken: string): Promise<string> {
-  const res = await fetch(`${VOE_API_BASE}/api/tokens`, {
+  const res = await backgroundFetch(`${VOE_API_BASE}/api/tokens`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
