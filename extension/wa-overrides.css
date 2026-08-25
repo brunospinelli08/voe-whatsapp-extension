@@ -1,0 +1,8 @@
+/* wa-overrides.css
+   Pequenos ajustes visuais no WhatsApp Web pra acomodar a sidebar da VOE.
+   Mantenha o mínimo possível aqui — o objetivo é abrir espaço, não
+   redesenhar o WhatsApp. */
+
+body {
+  overflow-x: hidden;
+}
