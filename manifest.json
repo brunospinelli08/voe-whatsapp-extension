@@ -45,8 +45,8 @@
     {
       "resources": [
         "sidebar/index.html",
+        "extension/wppconnect-wa.js",
         "extension/wa-js-bridge.js",
-        "extension/interceptor.js",
         "extension/wa-overrides.css"
       ],
       "matches": ["<all_urls>"]

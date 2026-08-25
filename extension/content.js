@@ -45,11 +45,20 @@ function loadStylesheetOverrides() {
 }
 
 function loadWaJsBridge() {
-  // Injeta o script no contexto REAL da página (não no mundo isolado da extensão).
-  // É assim que conseguimos acessar os módulos internos do WhatsApp Web.
-  const script = document.createElement('script')
-  script.src = chrome.runtime.getURL('extension/wa-js-bridge.js')
-  document.body.appendChild(script)
+  // Injeta os scripts no contexto REAL da página (não no mundo isolado da
+  // extensão). É assim que conseguimos acessar os módulos internos do
+  // WhatsApp Web. A ordem importa: a lib wa-js precisa estar carregada e
+  // executada ANTES do bridge, então encadeamos via onload em vez de
+  // simplesmente inserir os dois scripts em sequência (scripts injetados
+  // dinamicamente são async por padrão e podem executar fora de ordem).
+  const waJsLib = document.createElement('script')
+  waJsLib.src = chrome.runtime.getURL('extension/wppconnect-wa.js')
+  waJsLib.onload = () => {
+    const bridge = document.createElement('script')
+    bridge.src = chrome.runtime.getURL('extension/wa-js-bridge.js')
+    document.body.appendChild(bridge)
+  }
+  document.body.appendChild(waJsLib)
 }
 
 function waitForWhatsAppWeb() {
@@ -65,9 +74,9 @@ function waitForWhatsAppWeb() {
 waitForWhatsAppWeb()
 
 // Ponte de eventos: página real -> content script -> sidebar (iframe)
-// TODO: quando o wa-js estiver integrado (Passo 4), escutar aqui o evento
-// customizado disparado pelo wa-js-bridge.js com o telefone do chat ativo,
-// e repassar pro iframe via postMessage.
+// wa-js-bridge.js dispara este evento sempre que o chat ativo muda,
+// com { phone, name } do contato (ou null, se nenhum chat individual
+// estiver ativo). Aqui só repassamos pro iframe via postMessage.
 document.addEventListener('VOE_WHATSAPP_EVENT', event => {
   const sidebarFrame = document.getElementById('voe-sidebar-frame')
   if (sidebarFrame) {
