@@ -5,6 +5,7 @@
 import { FormEvent, useState } from 'react'
 import type { ActiveChat } from '../hooks/useActiveChat'
 import { voeApi } from '../lib/apiClient'
+import { supabase } from '../lib/supabaseClient'
 
 interface Props {
   chat: ActiveChat
@@ -58,9 +59,17 @@ export function CreateLeadForm({ chat, existingContactId, onCreated }: Props) {
 
       const stageId = await getDefaultStageId()
 
+      // Atribui ao próprio usuário logado na extensão — sem isso o lead
+      // nasce sem responsável e alguns filtros do dashboard (ex: "meus
+      // leads" na tela de Funil) escondem oportunidades sem assigned_to,
+      // dando a impressão de que o lead não foi criado quando na verdade
+      // só está fora do filtro.
+      const { data: sessionData } = await supabase.auth.getSession()
+      const assignedTo = sessionData.session?.user.id ?? null
+
       const { data: opportunity } = await voeApi.post<{ data: { id: string } }>(
         '/api/v1/opportunities',
-        { name: `${name.trim() || chat.phone} (WhatsApp)`, stage_id: stageId },
+        { name: `${name.trim() || chat.phone} (WhatsApp)`, stage_id: stageId, assigned_to: assignedTo },
       )
 
       await voeApi.post(`/api/v1/opportunities/${opportunity.id}/contacts`, {
