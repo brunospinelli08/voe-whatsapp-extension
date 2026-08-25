@@ -1,0 +1,166 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: #ffffff;
+  color: #1a1a1a;
+  height: 100vh;
+}
+
+#root {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.centered-message {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.muted {
+  color: #888;
+  font-size: 14px;
+}
+
+.error-text {
+  color: #c62828;
+  font-size: 13px;
+}
+
+.success-text {
+  color: #2e7d32;
+  font-size: 13px;
+}
+
+/* Login */
+.login-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 24px;
+}
+
+.login-screen h1 {
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+.login-subtitle {
+  color: #666;
+  font-size: 13px;
+  margin-bottom: 20px;
+}
+
+.login-screen form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.login-screen label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* App shell */
+.app-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #eee;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+  padding: 0;
+}
+
+main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+/* Inputs / buttons genéricos */
+input,
+textarea,
+select {
+  font: inherit;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+
+button {
+  font: inherit;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: #1a1a1a;
+  color: #fff;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Lead panel */
+.active-chat-header {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16px;
+}
+
+.chat-phone {
+  color: #888;
+  font-size: 12px;
+}
+
+.empty-state {
+  color: #555;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.opportunity-detail h2 {
+  font-size: 16px;
+  margin: 0 0 4px;
+}
+
+.stage-selector,
+.notes-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 16px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.stage-selector label,
+.notes-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
