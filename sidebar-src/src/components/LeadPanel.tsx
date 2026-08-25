@@ -56,7 +56,10 @@ export function LeadPanel({ chat }: Props) {
           />
 
           <NotesForm opportunityId={opportunity.id} />
-          <ScheduleVisitForm opportunityId={opportunity.id} />
+          <ScheduleVisitForm
+            opportunityId={opportunity.id}
+            contactId={opportunity.contacts[0]?.id ?? null}
+          />
         </div>
       )}
     </div>

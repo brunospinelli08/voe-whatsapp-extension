@@ -1,23 +1,26 @@
 // ScheduleVisitForm.tsx
-// "Agendar visita" — hoje o backend não tem um domínio de agenda de verdade
-// (sem lembrete, sem calendário). Isso registra a intenção como uma
-// activity tipo 'meeting' na timeline da oportunidade (POST /api/v1/tasks,
-// que insere em `activities`), com data/hora combinada dentro do texto —
-// não é um agendamento de verdade, é um log. Deixamos isso explícito na UI
-// pra não passar a falsa impressão de que existe lembrete/notificação por
-// trás. Quando a VOE tiver um domínio de Agenda de verdade, isso deve virar
-// uma chamada pra lá em vez de uma activity solta.
+// "Agendar visita" — cria uma task real (tabela `activities`, tipo
+// 'visit') via POST /api/v1/tasks. Só usa due_date/due_time (é isso que o
+// cron de lembretes em app.voeops.com/api/cron/task-reminders lê) +
+// scheduled_at (timestamptz, pra qualquer view que espere isso).
+//
+// Nota: a rota /api/v1/tasks faz `insert({ ...body, workspace_id,
+// created_by })` sem validar o corpo — os nomes de campo aqui têm que
+// bater exatamente com as colunas reais de `activities` (conferido direto
+// no Supabase via MCP, não no supabase/migration-v*.sql do repo, que
+// estava desatualizado — a tabela evoluiu sem migração registrada).
 
 import { FormEvent, useState } from 'react'
 import { voeApi } from '../lib/apiClient'
 
 interface Props {
   opportunityId: string
+  contactId?: string | null
 }
 
-export function ScheduleVisitForm({ opportunityId }: Props) {
+export function ScheduleVisitForm({ opportunityId, contactId }: Props) {
   const [scheduledAt, setScheduledAt] = useState('')
-  const [note, setNote] = useState('')
+  const [description, setDescription] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [savedAt, setSavedAt] = useState<number | null>(null)
@@ -28,23 +31,26 @@ export function ScheduleVisitForm({ opportunityId }: Props) {
     setSaving(true)
     setError(null)
     try {
-      const formattedDate = new Date(scheduledAt).toLocaleString('pt-BR')
-      const content = note.trim()
-        ? `Visita agendada para ${formattedDate}. ${note.trim()}`
-        : `Visita agendada para ${formattedDate}.`
+      const date = new Date(scheduledAt)
+      const dueDate = scheduledAt.slice(0, 10) // YYYY-MM-DD
+      const dueTime = scheduledAt.slice(11, 16) // HH:mm
 
       await voeApi.post('/api/v1/tasks', {
         opportunity_id: opportunityId,
-        type: 'meeting',
-        content,
-        metadata: { scheduled_at: new Date(scheduledAt).toISOString(), source: 'whatsapp_extension' },
+        contact_id: contactId ?? null,
+        type: 'visit',
+        title: 'Visita agendada via WhatsApp',
+        description: description.trim() || null,
+        due_date: dueDate,
+        due_time: dueTime,
+        scheduled_at: date.toISOString(),
       })
 
       setScheduledAt('')
-      setNote('')
+      setDescription('')
       setSavedAt(Date.now())
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao registrar visita')
+      setError(err instanceof Error ? err.message : 'Erro ao agendar visita')
     } finally {
       setSaving(false)
     }
@@ -52,11 +58,6 @@ export function ScheduleVisitForm({ opportunityId }: Props) {
 
   return (
     <form className="schedule-visit-form" onSubmit={handleSubmit}>
-      <p className="muted schedule-visit-disclaimer">
-        Isso só registra a visita na timeline do lead — ainda não existe lembrete/calendário de
-        verdade por trás.
-      </p>
-
       <label>
         Data e hora da visita
         <input
@@ -69,14 +70,14 @@ export function ScheduleVisitForm({ opportunityId }: Props) {
 
       <label>
         Observação (opcional)
-        <textarea value={note} onChange={e => setNote(e.target.value)} rows={2} />
+        <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} />
       </label>
 
       <button type="submit" disabled={saving || !scheduledAt}>
-        {saving ? 'Registrando…' : 'Registrar visita'}
+        {saving ? 'Agendando…' : 'Agendar visita'}
       </button>
       {error && <p className="error-text">{error}</p>}
-      {savedAt && !error && <p className="success-text">Visita registrada na timeline.</p>}
+      {savedAt && !error && <p className="success-text">Visita agendada.</p>}
     </form>
   )
 }
