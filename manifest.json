@@ -3,7 +3,6 @@
   "name": "VOE — Atendimento WhatsApp",
   "description": "Painel de atendimento da VOE dentro do WhatsApp Web. Fallback para quando a conexão principal do módulo Conversas estiver indisponível.",
   "version": "0.1.0",
-  "default_locale": "pt_BR",
 
   "action": {
     "default_icon": {
