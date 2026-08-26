@@ -151,6 +151,13 @@ depois da correção.
       já existe mas ainda não tem oportunidade.
 - [~] Card da oportunidade enriquecido (empresa, responsável, valor) + "Adicionar contato à
       oportunidade" + "Abrir na VOE" (deep link pra `app.voeops.com/deals/[id]`)
+- [~] **Painel de contexto (réplica do Inbox real)**: Lead Score ("10 · Frio" — só quando o
+      workspace tem a feature ativa, plano Scale/Enterprise, `GET /api/v1/lead-scoring-config`),
+      tipo de contato + tags editáveis (`ContactTagsEditor.tsx`, via `PUT /api/v1/contacts/:id`
+      que já existia) e anotações agora **listadas** (antes só criava, nunca mostrava as
+      existentes). Mapeado campo a campo contra `ContextPanel.tsx` (2193 linhas) antes de
+      implementar — um item do texto colado ("status Concluída") não bateu com nenhum código real
+      e foi descartado como provável ruído de copiar-colar.
 - [~] Aba de Atividades (somente leitura, via `GET /api/v1/tasks?opportunity_id=`)
 - [~] Aba de Modelos de mensagens (somente leitura + copiar, via `GET /api/v1/message-library`,
       endpoint novo em `app.voeops.com`) — **não envia direto pro WhatsApp**: enviar exigiria uma
