@@ -729,6 +729,145 @@ button.danger:hover:not(:disabled) {
   padding: 0 4px;
 }
 
+/* ── Label solto (não dentro de <label>, ex: acima dos chips de Funil) ── */
+.form-label-standalone {
+  font-size: 12.5px;
+  font-weight: 600;
+  margin: 0 0 4px;
+  color: hsl(var(--text-primary));
+}
+
+/* ── Chips de Funil ── */
+.pipeline-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pipeline-chip {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--text-secondary));
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pipeline-chip:hover:not(:disabled) {
+  border-color: hsl(var(--color-primary));
+}
+
+.pipeline-chip.is-active {
+  background: hsl(var(--color-primary));
+  border-color: hsl(var(--color-primary));
+  color: #fff;
+}
+
+/* ── Qualificação (estrelas) ── */
+.qualification-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.qualification-picker-stars {
+  display: flex;
+  gap: 2px;
+}
+
+.qualification-star {
+  background: none;
+  border: none;
+  padding: 2px;
+  font-size: 18px;
+  line-height: 1;
+  color: hsl(var(--border));
+}
+
+.qualification-star.is-active {
+  color: #f5a623;
+}
+
+/* ── Seção com sub-toggle (ex: Empresa) ── */
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid hsl(var(--border));
+  padding-top: 12px;
+}
+
+.form-subsection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  background: hsl(var(--surface-hover));
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.form-subsection label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ── Busca-e-selecione (empresa/contato existente) ── */
+.search-select {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.search-select-selected {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.search-select-results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  overflow: hidden;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.search-select-results button {
+  display: block;
+  width: 100%;
+  background: hsl(var(--card));
+  color: hsl(var(--text-primary));
+  border: none;
+  border-radius: 0;
+  text-align: left;
+  font-weight: 500;
+  font-size: 12.5px;
+  padding: 8px 10px;
+}
+
+.search-select-results li + li button {
+  border-top: 1px solid hsl(var(--border));
+}
+
+.search-select-results button:hover {
+  background: hsl(var(--color-primary) / 0.06);
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
