@@ -569,7 +569,7 @@ button.danger:hover:not(:disabled) {
 /* ── Forms compactos dentro de painéis ── */
 .stage-selector,
 .notes-form,
-.create-lead-form,
+.create-opportunity-form,
 .schedule-visit-form,
 .status-actions {
   display: flex;
@@ -581,12 +581,31 @@ button.danger:hover:not(:disabled) {
 
 .stage-selector label,
 .notes-form label,
-.create-lead-form label,
+.create-opportunity-form label,
 .schedule-visit-form label,
 .status-actions label {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.create-opportunity-form-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.create-opportunity-form-actions button {
+  flex: 1;
+}
+
+/* ── Escolha: salvar contato vs. criar oportunidade ── */
+.lead-choice-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.lead-choice-buttons button {
+  flex: 1;
 }
 
 .status-actions-buttons {

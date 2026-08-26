@@ -54,7 +54,10 @@ export function App() {
 
       <main>
         {chat ? (
-          <LeadPanel chat={chat} workspaceId={activeWorkspace.id} />
+          // key={chat.phone}: remonta o painel ao trocar de conversa — sem
+          // isso, o estado "escolhi criar oportunidade" de um chat vazava
+          // pro próximo chat aberto.
+          <LeadPanel key={chat.phone} chat={chat} workspaceId={activeWorkspace.id} />
         ) : (
           <div className="empty-state">
             <p>Abra uma conversa individual no WhatsApp Web pra ver os dados do lead aqui.</p>

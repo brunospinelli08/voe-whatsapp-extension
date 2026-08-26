@@ -1,6 +1,9 @@
-// CreateLeadForm.tsx
-// Cria um lead a partir do contato ativo do WhatsApp: contato -> oportunidade
-// -> vínculo entre os dois (POST /api/v1/opportunities/:id/contacts).
+// CreateOpportunityForm.tsx
+// Cria uma OPORTUNIDADE de venda a partir do contato ativo do WhatsApp —
+// contato (se ainda não existir) -> oportunidade -> vínculo entre os dois
+// (POST /api/v1/opportunities/:id/contacts). Ação distinta e explícita de
+// "só salvar o contato" (ver SaveContactAction.tsx) — nem todo contato que
+// fala com a VOE deve virar uma oportunidade de venda.
 //
 // Campos de Origem e campos personalizados são carregados dinamicamente do
 // workspace (useOriginOptions / useCustomFields) — igual o formulário real
@@ -20,6 +23,8 @@ interface Props {
   /** Se já existe um contato pra esse telefone (achado pelo useLeadLookup), reaproveita em vez de criar outro. */
   existingContactId?: string | null
   onCreated: () => void
+  /** Só aparece quando essa tela foi aberta por escolha explícita (contato ainda não existia). */
+  onCancel?: () => void
 }
 
 interface Stage {
@@ -45,7 +50,7 @@ async function getDefaultStageId(): Promise<string> {
   return firstStage.id
 }
 
-export function CreateLeadForm({ chat, existingContactId, onCreated }: Props) {
+export function CreateOpportunityForm({ chat, existingContactId, onCreated, onCancel }: Props) {
   const [name, setName] = useState(chat.name ?? '')
   const [originId, setOriginId] = useState('')
   const [customValues, setCustomValues] = useState<Record<string, CustomFieldValue>>({})
@@ -135,14 +140,14 @@ export function CreateLeadForm({ chat, existingContactId, onCreated }: Props) {
 
       onCreated()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao criar lead')
+      setError(err instanceof Error ? err.message : 'Erro ao criar oportunidade')
     } finally {
       setCreating(false)
     }
   }
 
   return (
-    <form className="create-lead-form" onSubmit={handleSubmit}>
+    <form className="create-opportunity-form" onSubmit={handleSubmit}>
       <label>
         Nome
         <input value={name} onChange={e => setName(e.target.value)} placeholder={chat.phone} />
@@ -171,9 +176,16 @@ export function CreateLeadForm({ chat, existingContactId, onCreated }: Props) {
         />
       ))}
 
-      <button type="submit" disabled={creating}>
-        {creating ? 'Criando…' : 'Criar lead'}
-      </button>
+      <div className="create-opportunity-form-actions">
+        <button type="submit" disabled={creating}>
+          {creating ? 'Criando…' : 'Criar oportunidade'}
+        </button>
+        {onCancel && (
+          <button type="button" className="secondary" disabled={creating} onClick={onCancel}>
+            Cancelar
+          </button>
+        )}
+      </div>
       {error && (
         <div className="error-banner">
           <span>⚠</span>

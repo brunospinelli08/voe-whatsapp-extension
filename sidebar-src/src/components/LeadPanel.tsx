@@ -1,12 +1,15 @@
 // LeadPanel.tsx
 // Modo Lead: dado o telefone do chat ativo, mostra a oportunidade
-// correspondente (se existir) com um menu de ações compacto, ou o
-// formulário de criação de lead quando não há nenhuma ainda.
+// correspondente (se existir) com um menu de ações compacto; ou, quando não
+// há nenhuma ainda, uma escolha explícita entre "Salvar contato" e "Criar
+// oportunidade" — nem todo contato que fala com a VOE vira uma venda.
 
+import { useState } from 'react'
 import type { ActiveChat } from '../hooks/useActiveChat'
 import { useLeadLookup } from '../hooks/useLeadLookup'
 import { ActionMenu } from './ActionMenu'
-import { CreateLeadForm } from './CreateLeadForm'
+import { CreateOpportunityForm } from './CreateOpportunityForm'
+import { SaveContactAction } from './SaveContactAction'
 import { OpportunityCard } from './OpportunityCard'
 import { Spinner } from './Spinner'
 
@@ -17,6 +20,7 @@ interface Props {
 
 export function LeadPanel({ chat, workspaceId }: Props) {
   const { loading, error, contact, opportunity, searched, refetch } = useLeadLookup(chat.phone)
+  const [creatingOpportunity, setCreatingOpportunity] = useState(false)
 
   return (
     <div className="lead-panel">
@@ -38,17 +42,29 @@ export function LeadPanel({ chat, workspaceId }: Props) {
       {!loading && !error && searched && !contact && (
         <div className="empty-state">
           <p>Nenhum lead encontrado com esse telefone.</p>
-          <CreateLeadForm chat={chat} onCreated={refetch} />
+
+          {!creatingOpportunity ? (
+            <div className="lead-choice-buttons">
+              <SaveContactAction chat={chat} onSaved={refetch} />
+              <button onClick={() => setCreatingOpportunity(true)}>Criar oportunidade</button>
+            </div>
+          ) : (
+            <CreateOpportunityForm
+              chat={chat}
+              onCreated={refetch}
+              onCancel={() => setCreatingOpportunity(false)}
+            />
+          )}
         </div>
       )}
 
       {!loading && !error && contact && !opportunity && (
         <div className="empty-state">
           <p>
-            Contato encontrado (<strong>{contact.name || contact.phone}</strong>), mas sem
-            nenhuma oportunidade ativa vinculada.
+            Contato encontrado (<strong>{contact.name || contact.phone}</strong>), ainda sem
+            nenhuma oportunidade de venda vinculada.
           </p>
-          <CreateLeadForm chat={chat} existingContactId={contact.id} onCreated={refetch} />
+          <CreateOpportunityForm chat={chat} existingContactId={contact.id} onCreated={refetch} />
         </div>
       )}
 
