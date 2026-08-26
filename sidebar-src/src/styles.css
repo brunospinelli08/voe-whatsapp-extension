@@ -456,14 +456,9 @@ button.danger:hover:not(:disabled) {
 
 .opportunity-card-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 6px;
   margin-top: 10px;
-}
-
-.opportunity-card-actions button {
-  flex: 1;
-  min-width: 120px;
 }
 
 .opportunity-meta {
@@ -604,11 +599,8 @@ button.danger:hover:not(:disabled) {
 
 .create-opportunity-form-actions {
   display: flex;
+  flex-direction: column;
   gap: 6px;
-}
-
-.create-opportunity-form-actions button {
-  flex: 1;
 }
 
 /* ── Escolha entre ações (ex: Nova oportunidade / Novo contato) — a
@@ -622,13 +614,8 @@ button.danger:hover:not(:disabled) {
 
 .status-actions-buttons {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 6px;
-}
-
-.status-actions-buttons button {
-  flex: 1;
-  min-width: 100px;
 }
 
 /* ── Atividades ── */
