@@ -19,6 +19,9 @@ export interface LeadContact {
   phone: string | null
   phone_e164: string | null
   email: string | null
+  /** GET /api/v1/contacts?search= já retorna a linha inteira (select("*")) — só faltava tipar. */
+  tags?: string[] | null
+  contact_type?: 'lead' | 'cliente' | 'parceiro' | 'fornecedor' | 'outro' | null
 }
 
 export interface LeadOpportunity {
@@ -35,6 +38,8 @@ export interface LeadOpportunity {
   total_value?: number
   company?: { id: string; name: string } | null
   owner?: { id: string; name: string } | null
+  /** Só populado quando o workspace tem Lead Scoring ativo (ver useLeadScoringConfig). */
+  lead_score?: number | null
 }
 
 interface LeadLookupState {

@@ -464,6 +464,7 @@ button.danger:hover:not(:disabled) {
 .opportunity-meta {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 12px;
 }
@@ -877,4 +878,163 @@ button.danger:hover:not(:disabled) {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* ── Lead Score ── */
+.lead-score-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.lead-score-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.lead-score-label {
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+/* ── Tipo de contato + tags ── */
+.contact-tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin: -6px 0 14px;
+}
+
+.contact-type-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: hsl(var(--color-primary) / 0.1);
+  color: hsl(var(--color-primary-dark));
+  border: none;
+}
+
+.contact-type-badge.is-empty {
+  background: hsl(var(--surface-hover));
+  color: hsl(var(--text-secondary));
+  font-style: italic;
+}
+
+.contact-type-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.contact-type-chip {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--text-secondary));
+}
+
+.contact-type-chip.is-active {
+  background: hsl(var(--color-primary));
+  border-color: hsl(var(--color-primary));
+  color: #fff;
+}
+
+.contact-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  background: hsl(var(--surface-hover));
+  color: hsl(var(--text-secondary));
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.contact-tag button {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.contact-tag button:hover {
+  color: hsl(var(--color-accent));
+}
+
+.contact-tag-form input {
+  width: 90px;
+  font-size: 10.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.contact-tag-add {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: none;
+  border: 1px dashed hsl(var(--border));
+  color: hsl(var(--text-secondary));
+}
+
+.contact-tag-add:hover {
+  border-color: hsl(var(--color-primary));
+  color: hsl(var(--color-primary));
+}
+
+/* ── Anotações ── */
+.notes-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.notes-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.note-item {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.note-content {
+  font-size: 12.5px;
+  color: hsl(var(--text-primary));
+  line-height: 1.5;
+}
+
+.note-content p {
+  margin: 0;
+}
+
+.note-meta {
+  font-size: 10.5px;
+  color: hsl(var(--text-secondary));
+  margin: 6px 0 0;
 }

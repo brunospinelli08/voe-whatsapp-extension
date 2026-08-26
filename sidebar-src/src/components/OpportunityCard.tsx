@@ -9,6 +9,8 @@ import { useState } from 'react'
 import { voeApi } from '../lib/apiClient'
 import { VOE_API_BASE } from '../config'
 import type { LeadContact, LeadOpportunity } from '../hooks/useLeadLookup'
+import { useLeadScoringConfig } from '../hooks/useLeadScoringConfig'
+import { LeadScoreBadge } from './LeadScoreBadge'
 
 // Nomenclatura confirmada contra o dashboard real (KanbanCard.tsx,
 // ContextPanel.tsx): "Vendido", não "Ganho" — RD Station usa "Ganho", a VOE não.
@@ -33,6 +35,7 @@ interface Props {
 export function OpportunityCard({ opportunity, activeContact, onLinked }: Props) {
   const [linking, setLinking] = useState(false)
   const [linkError, setLinkError] = useState<string | null>(null)
+  const { isActive: leadScoringActive, bands: scoreBands } = useLeadScoringConfig()
 
   const alreadyLinked =
     !activeContact || opportunity.contacts.some(c => c.id === activeContact.id)
@@ -66,6 +69,9 @@ export function OpportunityCard({ opportunity, activeContact, onLinked }: Props)
           {STATUS_LABELS[opportunity.status] ?? opportunity.status}
         </span>
         {opportunity.pipeline && <span className="muted">{opportunity.pipeline.name}</span>}
+        {leadScoringActive && typeof opportunity.lead_score === 'number' && (
+          <LeadScoreBadge score={opportunity.lead_score} bands={scoreBands} />
+        )}
       </div>
 
       <dl className="opportunity-summary">

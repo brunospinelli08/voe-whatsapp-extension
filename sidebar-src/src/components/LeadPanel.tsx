@@ -13,6 +13,7 @@ import { CreateOpportunityForm } from './CreateOpportunityForm'
 import { SaveContactAction } from './SaveContactAction'
 import { LinkExistingOpportunityForm } from './LinkExistingOpportunityForm'
 import { OpportunityCard } from './OpportunityCard'
+import { ContactTagsEditor } from './ContactTagsEditor'
 import { Spinner } from './Spinner'
 
 interface Props {
@@ -37,6 +38,11 @@ export function LeadPanel({ chat, workspaceId }: Props) {
         <strong>{chat.name || chat.phone}</strong>
         {chat.name && <span className="chat-phone">{chat.phone}</span>}
       </header>
+
+      {/* Tipo de contato + tags — mesma posição do ContextPanel real (logo abaixo do header, antes da Oportunidade) */}
+      {!loading && !error && contact && (
+        <ContactTagsEditor contact={contact} onChanged={refetch} />
+      )}
 
       {loading && <Spinner label="Buscando lead…" />}
 
