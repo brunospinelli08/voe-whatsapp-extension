@@ -28,7 +28,7 @@ sidebar-src/             Código-fonte React da sidebar (Vite + TypeScript)
 sidebar/                 Build final da sidebar (gerado por `npm run build` em sidebar-src/)
                           — é isso que o content.js carrega no iframe. COMMITADO no repo:
                           a extensão não roda nenhum build no carregamento, só lê os arquivos.
-icons/                   Ícones da extensão (placeholder — trocar pelo logo da VOE)
+icons/                   Ícones da extensão (símbolo oficial da VOE, extraído de app.voeops.com)
 ```
 
 ## Como testar localmente
@@ -77,10 +77,13 @@ esse token que autentica as chamadas a `/api/v1/opportunities`,
       pendente com o Bruno antes de mexer numa rota compartilhada com o resto do produto
 - [ ] Modo Lead — criar reserva / agendar visita
 - [ ] Modo Locatário ativo — fora do MVP, fase futura
-- [ ] Ícones finais (trocar placeholder pelo logo da VOE)
+- [x] Ícones finais (símbolo oficial da VOE em 16/48/128px)
 - [ ] Publicação na Chrome Web Store
 
 ## Ícones
 
-Os ícones em `icons/` são placeholders gerados automaticamente. Substituir
-pelo logo oficial da VOE antes de qualquer publicação.
+Os ícones em `icons/` usam o símbolo oficial da VOE (mesmo mark já usado na
+sidebar, em `sidebar-src/public/voe-icon.png`), extraído de
+`app.voeops.com/public/VOE - Icone-Fundo transparente.png`. Fundo
+transparente, sem o nome por extenso — só o símbolo, pra manter legibilidade
+no ícone de 16px.
