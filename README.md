@@ -120,7 +120,9 @@ esse token que autentica as chamadas a `/api/v1/opportunities`,
 
 - [x] Estrutura base da extensão (manifest, content script, background)
 - [x] Injeção da sidebar (iframe) e redimensionamento do layout
-- [x] Integração com `@wppconnect/wa-js` (captura nome/telefone do chat ativo)
+- [x] Integração com `@wppconnect/wa-js` (captura nome/telefone do chat ativo, incluindo
+      resolução de telefone real para contatos com ID `@lid` via `contact.pnForLid` —
+      pendente de confirmação em teste ao vivo contra um chat `@lid` de verdade)
 - [x] Sidebar migrada pra React (Vite + TypeScript)
 - [x] Tela de login (Supabase Auth) + ponte pra token de workspace via `/api/tokens`
 - [x] Modo Lead — buscar lead por telefone, avançar etapa do funil, criar anotação
