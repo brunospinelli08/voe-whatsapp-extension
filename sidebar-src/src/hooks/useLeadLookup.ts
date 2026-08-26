@@ -28,6 +28,7 @@ export interface LeadOpportunity {
   stage_id: string
   stage?: { id: string; name: string } | null
   pipeline?: { id: string; name: string } | null
+  lost_reason: string | null
   contacts: LeadContact[]
 }
 

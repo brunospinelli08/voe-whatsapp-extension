@@ -1,20 +1,27 @@
 // LeadPanel.tsx
 // Modo Lead: dado o telefone do chat ativo, mostra a oportunidade
-// correspondente (se existir) com etapa do funil e anotações, ou o
+// correspondente (se existir) com um menu de ações compacto, ou o
 // formulário de criação de lead quando não há nenhuma ainda.
 
 import type { ActiveChat } from '../hooks/useActiveChat'
 import { useLeadLookup } from '../hooks/useLeadLookup'
-import { StageSelector } from './StageSelector'
-import { NotesForm } from './NotesForm'
+import { ActionMenu } from './ActionMenu'
 import { CreateLeadForm } from './CreateLeadForm'
-import { ScheduleVisitForm } from './ScheduleVisitForm'
+import { Spinner } from './Spinner'
 
 interface Props {
   chat: ActiveChat
+  workspaceId: string
 }
 
-export function LeadPanel({ chat }: Props) {
+const STATUS_LABELS: Record<string, string> = {
+  active: 'Ativo',
+  won: 'Ganho',
+  lost: 'Perdido',
+  paused: 'Pausado',
+}
+
+export function LeadPanel({ chat, workspaceId }: Props) {
   const { loading, error, contact, opportunity, searched, refetch } = useLeadLookup(chat.phone)
 
   return (
@@ -24,17 +31,24 @@ export function LeadPanel({ chat }: Props) {
         {chat.name && <span className="chat-phone">{chat.phone}</span>}
       </header>
 
-      {loading && <p className="muted">Buscando lead…</p>}
-      {error && <p className="error-text">{error}</p>}
+      {loading && <Spinner label="Buscando lead…" />}
 
-      {!loading && searched && !contact && (
+      {/* Erro de verdade (rede/API) — nunca cai no estado "não encontrado" por engano */}
+      {!loading && error && (
+        <div className="error-banner">
+          <span>⚠</span>
+          <span>{error}</span>
+        </div>
+      )}
+
+      {!loading && !error && searched && !contact && (
         <div className="empty-state">
           <p>Nenhum lead encontrado com esse telefone.</p>
           <CreateLeadForm chat={chat} onCreated={refetch} />
         </div>
       )}
 
-      {!loading && contact && !opportunity && (
+      {!loading && !error && contact && !opportunity && (
         <div className="empty-state">
           <p>
             Contato encontrado (<strong>{contact.name || contact.phone}</strong>), mas sem
@@ -44,21 +58,27 @@ export function LeadPanel({ chat }: Props) {
         </div>
       )}
 
-      {!loading && opportunity && (
-        <div className="opportunity-detail">
+      {!loading && !error && opportunity && (
+        <div className="card opportunity-detail">
           <h2>{opportunity.name}</h2>
-          {opportunity.pipeline && <p className="muted">{opportunity.pipeline.name}</p>}
+          <div className="opportunity-meta">
+            <span className={`status-badge status-${opportunity.status}`}>
+              {STATUS_LABELS[opportunity.status] ?? opportunity.status}
+            </span>
+            {opportunity.pipeline && <span className="muted">{opportunity.pipeline.name}</span>}
+          </div>
+          {opportunity.status === 'lost' && opportunity.lost_reason && (
+            <p className="muted">Motivo: {opportunity.lost_reason}</p>
+          )}
 
-          <StageSelector
+          <ActionMenu
             opportunityId={opportunity.id}
+            workspaceId={workspaceId}
+            pipelineId={opportunity.pipeline?.id ?? null}
             currentStageId={opportunity.stage_id}
-            onMoved={refetch}
-          />
-
-          <NotesForm opportunityId={opportunity.id} />
-          <ScheduleVisitForm
-            opportunityId={opportunity.id}
+            currentStatus={opportunity.status}
             contactId={opportunity.contacts[0]?.id ?? null}
+            onChanged={refetch}
           />
         </div>
       )}

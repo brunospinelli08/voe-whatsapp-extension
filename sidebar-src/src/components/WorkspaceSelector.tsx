@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { useWorkspaces } from '../hooks/useWorkspaces'
+import { Spinner } from './Spinner'
 
 interface Props {
   user: User
@@ -40,7 +41,7 @@ export function WorkspaceSelector({ user, onSelect }: Props) {
   if (loading || (workspaces.length === 1 && selecting)) {
     return (
       <div className="centered-message">
-        <p className="muted">Carregando workspaces…</p>
+        <Spinner label="Carregando workspaces…" />
       </div>
     )
   }
@@ -48,7 +49,10 @@ export function WorkspaceSelector({ user, onSelect }: Props) {
   if (error) {
     return (
       <div className="centered-message">
-        <p className="error-text">{error}</p>
+        <div className="error-banner">
+          <span>⚠</span>
+          <span>{error}</span>
+        </div>
       </div>
     )
   }
@@ -63,6 +67,7 @@ export function WorkspaceSelector({ user, onSelect }: Props) {
 
   return (
     <div className="workspace-selector">
+      <img src={chrome.runtime.getURL('sidebar/voe-icon.png')} alt="" className="brand-icon-large" />
       <h1>Escolha um workspace</h1>
       <p className="login-subtitle">Qual conta você quer usar aqui no WhatsApp?</p>
 

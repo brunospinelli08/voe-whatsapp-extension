@@ -1,36 +1,45 @@
 // StageSelector.tsx
 import { useEffect, useState } from 'react'
 import { voeApi } from '../lib/apiClient'
+import { Spinner } from './Spinner'
 
 interface Stage {
   id: string
   name: string
-  pipeline_id: string
+  order: number
 }
 
 interface Pipeline {
   id: string
-  name: string
   pipeline_stages: Stage[]
 }
 
 interface Props {
   opportunityId: string
   currentStageId: string
+  /** Pipeline da própria oportunidade — só mostramos etapas desse pipeline,
+   * nunca de outro pipeline do workspace (workspaces podem ter mais de um). */
+  pipelineId: string | null
   onMoved: () => void
 }
 
-export function StageSelector({ opportunityId, currentStageId, onMoved }: Props) {
+export function StageSelector({ opportunityId, currentStageId, pipelineId, onMoved }: Props) {
   const [stages, setStages] = useState<Stage[]>([])
+  const [loadingStages, setLoadingStages] = useState(true)
   const [moving, setMoving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    setLoadingStages(true)
     voeApi
       .get<{ data: Pipeline[] }>('/api/v1/pipelines')
-      .then(res => setStages(res.data.flatMap(p => p.pipeline_stages)))
+      .then(res => {
+        const pipeline = res.data.find(p => p.id === pipelineId) ?? res.data[0]
+        setStages([...(pipeline?.pipeline_stages ?? [])].sort((a, b) => a.order - b.order))
+      })
       .catch(err => setError(err instanceof Error ? err.message : 'Erro ao carregar etapas'))
-  }, [])
+      .finally(() => setLoadingStages(false))
+  }, [pipelineId])
 
   async function handleChange(stageId: string) {
     if (stageId === currentStageId) return
@@ -45,6 +54,8 @@ export function StageSelector({ opportunityId, currentStageId, onMoved }: Props)
       setMoving(false)
     }
   }
+
+  if (loadingStages) return <Spinner label="Carregando etapas…" />
 
   return (
     <div className="stage-selector">
@@ -62,6 +73,7 @@ export function StageSelector({ opportunityId, currentStageId, onMoved }: Props)
           ))}
         </select>
       </label>
+      {moving && <Spinner label="Movendo…" />}
       {error && <p className="error-text">{error}</p>}
     </div>
   )

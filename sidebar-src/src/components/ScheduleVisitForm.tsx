@@ -76,7 +76,12 @@ export function ScheduleVisitForm({ opportunityId, contactId }: Props) {
       <button type="submit" disabled={saving || !scheduledAt}>
         {saving ? 'Agendando…' : 'Agendar visita'}
       </button>
-      {error && <p className="error-text">{error}</p>}
+      {error && (
+        <div className="error-banner">
+          <span>⚠</span>
+          <span>{error}</span>
+        </div>
+      )}
       {savedAt && !error && <p className="success-text">Visita agendada.</p>}
     </form>
   )

@@ -42,7 +42,12 @@ export function NotesForm({ opportunityId }: Props) {
       <button type="submit" disabled={saving || !content.trim()}>
         {saving ? 'Salvando…' : 'Salvar anotação'}
       </button>
-      {error && <p className="error-text">{error}</p>}
+      {error && (
+        <div className="error-banner">
+          <span>⚠</span>
+          <span>{error}</span>
+        </div>
+      )}
       {savedAt && !error && <p className="success-text">Anotação salva.</p>}
     </form>
   )

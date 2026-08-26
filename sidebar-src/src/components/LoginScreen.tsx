@@ -1,6 +1,8 @@
 // LoginScreen.tsx
 import { FormEvent, useState } from 'react'
 
+const voeIconUrl = chrome.runtime.getURL('sidebar/voe-icon.png')
+
 interface Props {
   onSignIn: (email: string, password: string) => Promise<{ error: string | null }>
 }
@@ -22,6 +24,7 @@ export function LoginScreen({ onSignIn }: Props) {
 
   return (
     <div className="login-screen">
+      <img src={voeIconUrl} alt="" className="brand-icon-large" />
       <h1>VOE — Atendimento</h1>
       <p className="login-subtitle">Entre com sua conta da VOE pra usar o fallback no WhatsApp Web.</p>
 

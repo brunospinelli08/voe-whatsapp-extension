@@ -103,7 +103,12 @@ export function CreateLeadForm({ chat, existingContactId, onCreated }: Props) {
       <button type="submit" disabled={creating}>
         {creating ? 'Criando…' : 'Criar lead'}
       </button>
-      {error && <p className="error-text">{error}</p>}
+      {error && (
+        <div className="error-banner">
+          <span>⚠</span>
+          <span>{error}</span>
+        </div>
+      )}
     </form>
   )
 }
