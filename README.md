@@ -127,11 +127,29 @@ esse token que autentica as chamadas a `/api/v1/opportunities`,
 - [x] Modo Lead — criar lead do zero a partir do WhatsApp (contato + oportunidade + vínculo
       via `POST /api/v1/opportunities/[id]/contacts`, endpoint dedicado em `app.voeops.com`)
 - [x] Modo Lead — agendar visita (log de atividade em `activities`/`tasks`)
-- [x] Modo Lead — marcar ganho/perdido/pausar
-- [x] Modo Lead completo, testado de ponta a ponta em ambiente real
+- [x] Modo Lead — marcar vendido/perdido/pausar
+- [x] Modo Lead (fase 1) completo, testado de ponta a ponta em ambiente real
 - [ ] Modo Locatário ativo — fora do MVP, fase futura
 - [x] Ícones finais (símbolo oficial da VOE em 16/48/128px)
 - [ ] Publicação na Chrome Web Store
+
+**Modo Lead — fase 2 (expansão inspirada na extensão do RD Station, campos/nomenclatura 100% VOE):**
+implementado e buildado, **ainda não testado contra uma sessão real do WhatsApp Web** — pendente
+de validação visual antes de considerar concluído.
+
+- [~] Card da oportunidade enriquecido (empresa, responsável, valor) + "Adicionar contato à
+      oportunidade" + "Abrir na VOE" (deep link pra `app.voeops.com/deals/[id]`)
+- [~] Aba de Atividades (somente leitura, via `GET /api/v1/tasks?opportunity_id=`)
+- [~] Aba de Modelos de mensagens (somente leitura + copiar, via `GET /api/v1/message-library`,
+      endpoint novo em `app.voeops.com`) — **não envia direto pro WhatsApp**: enviar exigiria uma
+      ponte de mão dupla sidebar → content script → wa-js que não foi construída ainda (fora de
+      escopo desta rodada, ver decisão registrada na investigação)
+- [~] Formulário de Nova Oportunidade dinâmico: campo Origem + campos personalizados do workspace
+      renderizados dinamicamente (`GET /api/v1/custom-fields?for=deal`, `GET /api/v1/origin-options`,
+      ambos endpoints novos em `app.voeops.com`)
+- [ ] Catálogo de Produtos (fotos/vídeos/mensagens) — **fora desta rodada por decisão consciente**:
+      maior item novo do pedido, exige migration + UI de gestão nova no dashboard + endpoint v1,
+      sem nenhuma especificação de upload/envio ainda. Fica pra uma rodada própria de planejamento.
 
 ## Ícones
 
