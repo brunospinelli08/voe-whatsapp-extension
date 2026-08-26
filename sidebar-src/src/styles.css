@@ -542,6 +542,17 @@ button.danger:hover:not(:disabled) {
   background: hsl(var(--color-primary) / 0.04);
 }
 
+.action-menu-chevron {
+  flex-shrink: 0;
+  color: hsl(var(--text-secondary));
+  transition: transform 0.18s ease;
+}
+
+.action-menu-chevron.is-open {
+  transform: rotate(180deg);
+  color: hsl(var(--color-primary));
+}
+
 .action-panel {
   border: 1px solid hsl(var(--border));
   border-radius: 8px;
