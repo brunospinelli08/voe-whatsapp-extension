@@ -156,9 +156,16 @@ depois da correção.
       endpoint novo em `app.voeops.com`) — **não envia direto pro WhatsApp**: enviar exigiria uma
       ponte de mão dupla sidebar → content script → wa-js que não foi construída ainda (fora de
       escopo desta rodada, ver decisão registrada na investigação)
-- [~] Formulário de Nova Oportunidade dinâmico: campo Origem + campos personalizados do workspace
-      renderizados dinamicamente (`GET /api/v1/custom-fields?for=deal`, `GET /api/v1/origin-options`,
-      ambos endpoints novos em `app.voeops.com`)
+- [~] **Formulário de Nova Oportunidade completo** — replica campo a campo o formulário real do
+      dashboard (`NewOpportunityModal.tsx`): Funil/Etapa, Responsável, Unidade, campos nativos do
+      segmento do workspace (dinâmico — não hardcoded, funciona pra qualquer segmento), campos
+      personalizados, Qualificação (estrelas com labels do workspace), Orçamento, Origem, Campanha,
+      Empresa (vincular/criar). Depende de 6 endpoints novos em `app.voeops.com`
+      (`campaign-options`, `qualification-labels`, `workspace-units`, `workspace-users`,
+      `segment-fields`, `contacts` com `dedupe`) — **branch
+      `feat/voe-extension-full-opportunity-form` ainda não revisada/mergeada**, não funciona em
+      produção até isso acontecer. Decisão consciente: a seção "Contato" do formulário real (Sem/
+      Vincular/Criar) não foi replicada — na extensão o contato é sempre o do WhatsApp ativo.
 - [ ] Catálogo de Produtos (fotos/vídeos/mensagens) — **fora desta rodada por decisão consciente**:
       maior item novo do pedido, exige migration + UI de gestão nova no dashboard + endpoint v1,
       sem nenhuma especificação de upload/envio ainda. Fica pra uma rodada própria de planejamento.
