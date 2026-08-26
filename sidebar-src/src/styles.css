@@ -570,6 +570,7 @@ button.danger:hover:not(:disabled) {
 .stage-selector,
 .notes-form,
 .create-opportunity-form,
+.save-contact-form,
 .schedule-visit-form,
 .status-actions {
   display: flex;
@@ -582,6 +583,7 @@ button.danger:hover:not(:disabled) {
 .stage-selector label,
 .notes-form label,
 .create-opportunity-form label,
+.save-contact-form label,
 .schedule-visit-form label,
 .status-actions label {
   display: flex;
@@ -598,14 +600,13 @@ button.danger:hover:not(:disabled) {
   flex: 1;
 }
 
-/* ── Escolha: salvar contato vs. criar oportunidade ── */
+/* ── Escolha entre ações (ex: Nova oportunidade / Novo contato) — a
+   primeira opção (ação principal) sempre em cima, com destaque; a
+   secundária embaixo, discreta. ── */
 .lead-choice-buttons {
   display: flex;
+  flex-direction: column;
   gap: 6px;
-}
-
-.lead-choice-buttons button {
-  flex: 1;
 }
 
 .status-actions-buttons {
