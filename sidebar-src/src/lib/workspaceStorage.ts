@@ -3,51 +3,62 @@
 // usuário + um token de API por workspace (não um token global único —
 // um usuário pode ter mais de um workspace, e cada um precisa do seu
 // próprio token voe_xxxx).
-
-const ACTIVE_WORKSPACE_KEY = 'voe-ext-active-workspace'
-const WORKSPACE_TOKENS_KEY = 'voe-ext-workspace-tokens'
+//
+// Tudo é namespaced por userId (o id da sessão do Supabase). Sem isso, se
+// duas contas diferentes usassem a mesma instalação da extensão, a segunda
+// herdaria silenciosamente o workspace/token da primeira.
 
 export interface ActiveWorkspace {
   id: string
   name: string
 }
 
-export async function getActiveWorkspace(): Promise<ActiveWorkspace | null> {
-  const result = await chrome.storage.local.get(ACTIVE_WORKSPACE_KEY)
-  return result[ACTIVE_WORKSPACE_KEY] ?? null
+function activeWorkspaceKey(userId: string): string {
+  return `voe-ext-active-workspace:${userId}`
 }
 
-export async function setActiveWorkspace(workspace: ActiveWorkspace): Promise<void> {
-  await chrome.storage.local.set({ [ACTIVE_WORKSPACE_KEY]: workspace })
+function workspaceTokensKey(userId: string): string {
+  return `voe-ext-workspace-tokens:${userId}`
 }
 
-export async function clearActiveWorkspace(): Promise<void> {
-  await chrome.storage.local.remove(ACTIVE_WORKSPACE_KEY)
+export async function getActiveWorkspace(userId: string): Promise<ActiveWorkspace | null> {
+  const key = activeWorkspaceKey(userId)
+  const result = await chrome.storage.local.get(key)
+  return result[key] ?? null
 }
 
-async function getTokenMap(): Promise<Record<string, string>> {
-  const result = await chrome.storage.local.get(WORKSPACE_TOKENS_KEY)
-  return result[WORKSPACE_TOKENS_KEY] ?? {}
+export async function setActiveWorkspace(userId: string, workspace: ActiveWorkspace): Promise<void> {
+  await chrome.storage.local.set({ [activeWorkspaceKey(userId)]: workspace })
 }
 
-export async function getWorkspaceToken(workspaceId: string): Promise<string | null> {
-  const map = await getTokenMap()
+export async function clearActiveWorkspace(userId: string): Promise<void> {
+  await chrome.storage.local.remove(activeWorkspaceKey(userId))
+}
+
+async function getTokenMap(userId: string): Promise<Record<string, string>> {
+  const key = workspaceTokensKey(userId)
+  const result = await chrome.storage.local.get(key)
+  return result[key] ?? {}
+}
+
+export async function getWorkspaceToken(userId: string, workspaceId: string): Promise<string | null> {
+  const map = await getTokenMap(userId)
   return map[workspaceId] ?? null
 }
 
-export async function setWorkspaceToken(workspaceId: string, token: string): Promise<void> {
-  const map = await getTokenMap()
+export async function setWorkspaceToken(userId: string, workspaceId: string, token: string): Promise<void> {
+  const map = await getTokenMap(userId)
   map[workspaceId] = token
-  await chrome.storage.local.set({ [WORKSPACE_TOKENS_KEY]: map })
+  await chrome.storage.local.set({ [workspaceTokensKey(userId)]: map })
 }
 
-export async function clearWorkspaceToken(workspaceId: string): Promise<void> {
-  const map = await getTokenMap()
+export async function clearWorkspaceToken(userId: string, workspaceId: string): Promise<void> {
+  const map = await getTokenMap(userId)
   delete map[workspaceId]
-  await chrome.storage.local.set({ [WORKSPACE_TOKENS_KEY]: map })
+  await chrome.storage.local.set({ [workspaceTokensKey(userId)]: map })
 }
 
-/** Limpa tudo — usado no logout. */
-export async function clearAllWorkspaceData(): Promise<void> {
-  await chrome.storage.local.remove([ACTIVE_WORKSPACE_KEY, WORKSPACE_TOKENS_KEY])
+/** Limpa tudo desse usuário — usado no logout. */
+export async function clearAllWorkspaceData(userId: string): Promise<void> {
+  await chrome.storage.local.remove([activeWorkspaceKey(userId), workspaceTokensKey(userId)])
 }

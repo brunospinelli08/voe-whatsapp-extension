@@ -22,7 +22,9 @@ import { clearWorkspaceToken, getWorkspaceToken, setWorkspaceToken } from './wor
 
 const TOKEN_NAME = 'VOE WhatsApp Extension'
 
-export { clearWorkspaceToken as clearVoeToken }
+export async function clearVoeToken(userId: string, workspaceId: string): Promise<void> {
+  await clearWorkspaceToken(userId, workspaceId)
+}
 
 /** Torna `workspaceId` o workspace ativo do usuário no app.voeops.com (users.workspace_id). */
 export async function selectWorkspaceOnServer(
@@ -71,12 +73,16 @@ async function mintVoeToken(supabaseAccessToken: string): Promise<string> {
  * o workspace no servidor + gerar um token) se não houver um token salvo
  * pra esse workspace ainda.
  */
-export async function getVoeToken(supabaseAccessToken: string, workspaceId: string): Promise<string> {
-  const stored = await getWorkspaceToken(workspaceId)
+export async function getVoeToken(
+  supabaseAccessToken: string,
+  userId: string,
+  workspaceId: string,
+): Promise<string> {
+  const stored = await getWorkspaceToken(userId, workspaceId)
   if (stored) return stored
 
   await selectWorkspaceOnServer(supabaseAccessToken, workspaceId)
   const fresh = await mintVoeToken(supabaseAccessToken)
-  await setWorkspaceToken(workspaceId, fresh)
+  await setWorkspaceToken(userId, workspaceId, fresh)
   return fresh
 }

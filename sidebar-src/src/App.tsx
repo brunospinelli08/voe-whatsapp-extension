@@ -17,7 +17,7 @@ export function App() {
     loading: workspaceLoading,
     selectWorkspace,
     changeWorkspace,
-  } = useActiveWorkspace()
+  } = useActiveWorkspace(session?.user.id ?? null)
 
   if (loading || (session && workspaceLoading)) {
     return (

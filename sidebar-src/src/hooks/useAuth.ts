@@ -41,8 +41,13 @@ export function useAuth(): UseAuthResult {
   }, [])
 
   const signOut = useCallback(async () => {
+    // Captura o userId ANTES do signOut — depois disso session vira null e
+    // a gente perde a referência de qual storage limpar.
+    const { data: sessionData } = await supabase.auth.getSession()
+    const userId = sessionData.session?.user.id
+
     await supabase.auth.signOut()
-    await clearAllWorkspaceData()
+    if (userId) await clearAllWorkspaceData(userId)
   }, [])
 
   return { session, loading, signIn, signOut }

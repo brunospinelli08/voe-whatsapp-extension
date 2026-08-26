@@ -21,12 +21,13 @@ class ApiError extends Error {
 async function request<T>(path: string, init: RequestInit = {}, retrying = false): Promise<T> {
   const { data: sessionData } = await supabase.auth.getSession()
   const accessToken = sessionData.session?.access_token
-  if (!accessToken) throw new ApiError('Sessão expirada, faça login novamente.', 401)
+  const userId = sessionData.session?.user.id
+  if (!accessToken || !userId) throw new ApiError('Sessão expirada, faça login novamente.', 401)
 
-  const activeWorkspace = await getActiveWorkspace()
+  const activeWorkspace = await getActiveWorkspace(userId)
   if (!activeWorkspace) throw new ApiError('Nenhum workspace selecionado.', 400)
 
-  const voeToken = await getVoeToken(accessToken, activeWorkspace.id)
+  const voeToken = await getVoeToken(accessToken, userId, activeWorkspace.id)
 
   const res = await backgroundFetch(`${VOE_API_BASE}${path}`, {
     ...init,
@@ -41,7 +42,7 @@ async function request<T>(path: string, init: RequestInit = {}, retrying = false
     // Token desse workspace pode ter sido revogado manualmente no
     // dashboard — limpa e tenta uma vez gerar um novo antes de propagar o
     // erro.
-    await clearVoeToken(activeWorkspace.id)
+    await clearVoeToken(userId, activeWorkspace.id)
     return request<T>(path, init, true)
   }
 
