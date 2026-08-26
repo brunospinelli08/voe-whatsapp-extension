@@ -142,8 +142,11 @@ depois da correção.
       contato + oportunidade juntos por trás de um botão só ("Criar lead"), e ficava visualmente
       idêntico a um formulário de contato em workspaces sem Origem/campos personalizados
       configurados (só o campo Nome aparecia). Achado testando ao vivo: nem todo contato que fala
-      com a VOE deve virar uma oportunidade de venda. Agora são duas ações explícitas e distintas
-      (`SaveContactAction.tsx` / `CreateOpportunityForm.tsx`).
+      com a VOE deve virar uma oportunidade de venda. Agora são ações explícitas e distintas:
+      "Nova oportunidade" (sempre a ação principal, em cima) e "Novo contato" (só pede Nome) quando
+      nada foi encontrado; "Nova oportunidade" e "Vincular oportunidade" (select com as
+      oportunidades ativas em ordem alfabética, `LinkExistingOpportunityForm.tsx`) quando o contato
+      já existe mas ainda não tem oportunidade.
 - [~] Card da oportunidade enriquecido (empresa, responsável, valor) + "Adicionar contato à
       oportunidade" + "Abrir na VOE" (deep link pra `app.voeops.com/deals/[id]`)
 - [~] Aba de Atividades (somente leitura, via `GET /api/v1/tasks?opportunity_id=`)
