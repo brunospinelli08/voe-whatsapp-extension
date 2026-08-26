@@ -7,6 +7,40 @@ módulo Conversas (Evolution API) estiver indisponível.
 Ver documento de planejamento completo para contexto de produto,
 arquitetura e roadmap.
 
+## ⚠️ Ambiente de desenvolvimento — leia antes de testar
+
+**Existe uma única pasta de trabalho válida para essa extensão:**
+
+```
+C:\Users\bruno\voe-whatsapp-extension-run
+```
+
+É o clone Git de verdade — a fonte de verdade do projeto. **Nunca copie
+esta pasta para outro lugar (Downloads, Área de Trabalho, um zip, etc.)
+para testar.** Sempre selecione esse caminho diretamente em
+`chrome://extensions` → "Carregar sem compactação".
+
+Isso já causou confusão real uma vez: o Chrome ficou carregando a
+extensão a partir de `~\Downloads\voe-whatsapp-extension-skeleton\voe-ext`
+— uma cópia solta e desatualizada do zip inicial do projeto, sem
+nenhuma relação com o Git. Ícones novos e correções que já estavam
+commitadas pareciam "não funcionar", quando na verdade estavam sendo
+testadas no lugar errado. Se em algum momento existir dúvida sobre qual
+pasta usar, rode `git status` e `git log -1` nela — se não for um
+repositório Git com o remote certo (`voe-whatsapp-extension`), não é a
+pasta certa.
+
+Dois lembretes operacionais que custaram tempo de debug pra aprender:
+
+- **Depois de recarregar a extensão em `chrome://extensions`, dê F5 na
+  aba do WhatsApp Web também** — não basta recarregar só a extensão. O
+  content script antigo injetado na aba fica com o contexto invalidado
+  (`Extension context invalidated`) e não se reconecta sozinho; sem o
+  F5, a sidebar parece travada/quebrada mesmo com a extensão atualizada.
+- **`sidebar/` é gerada, nunca editada manualmente.** Qualquer alteração
+  dentro de `sidebar-src/` só aparece na extensão depois de rodar
+  `npm run build` (dentro de `sidebar-src/`) — ver checklist abaixo.
+
 ## Estrutura
 
 ```
@@ -31,12 +65,31 @@ sidebar/                 Build final da sidebar (gerado por `npm run build` em s
 icons/                   Ícones da extensão (símbolo oficial da VOE, extraído de app.voeops.com)
 ```
 
-## Como testar localmente
+## Como testar localmente (checklist completo, do zero)
 
-1. Abra `chrome://extensions`
-2. Ative o "Modo do desenvolvedor"
-3. Clique em "Carregar sem compactação" e selecione esta pasta
-4. Abra `https://web.whatsapp.com/` — a sidebar deve aparecer encostada à direita
+1. Clone (ou use o clone já existente — ver aviso acima):
+   `C:\Users\bruno\voe-whatsapp-extension-run`
+2. Instale as dependências da sidebar (só na primeira vez, ou depois de
+   mudanças em `package.json`):
+   ```
+   cd sidebar-src
+   npm install
+   ```
+3. Rode o build da sidebar — **sempre**, mesmo que você ache que não
+   mexeu em nada dela; é rápido e evita testar código desatualizado:
+   ```
+   npm run build     # dentro de sidebar-src/ — sobrescreve ../sidebar
+   ```
+4. Abra `chrome://extensions`
+5. Ative o "Modo do desenvolvedor"
+6. Clique em "Carregar sem compactação" e selecione
+   `C:\Users\bruno\voe-whatsapp-extension-run` (a pasta raiz do repo —
+   **nunca** uma cópia dela)
+7. Abra `https://web.whatsapp.com/` — a sidebar deve aparecer encostada
+   à direita
+8. Depois de qualquer atualização futura (recarregar a extensão pelo
+   botão ↻), **dê F5 na aba do WhatsApp Web** — sem isso o content
+   script fica com o contexto invalidado e a sidebar não volta sozinha
 
 ## Como editar a sidebar (React)
 
@@ -46,12 +99,11 @@ sobrescritos.
 
 ```
 cd sidebar-src
-npm install       # só na primeira vez
 npm run build     # sobrescreve ../sidebar com o build novo
 ```
 
 Depois de buildar, recarregue a extensão em `chrome://extensions` (botão ↻)
-pra ver as mudanças.
+e dê F5 na aba do WhatsApp Web (ver aviso no topo do README).
 
 ## Autenticação
 
@@ -72,10 +124,11 @@ esse token que autentica as chamadas a `/api/v1/opportunities`,
 - [x] Sidebar migrada pra React (Vite + TypeScript)
 - [x] Tela de login (Supabase Auth) + ponte pra token de workspace via `/api/tokens`
 - [x] Modo Lead — buscar lead por telefone, avançar etapa do funil, criar anotação
-- [ ] Modo Lead — criar lead do zero a partir do WhatsApp: **bloqueado**, depende de endpoint
-      novo em `/api/v1/*` pra vincular contato à oportunidade (`opportunity_contacts`) — decisão
-      pendente com o Bruno antes de mexer numa rota compartilhada com o resto do produto
-- [ ] Modo Lead — criar reserva / agendar visita
+- [x] Modo Lead — criar lead do zero a partir do WhatsApp (contato + oportunidade + vínculo
+      via `POST /api/v1/opportunities/[id]/contacts`, endpoint dedicado em `app.voeops.com`)
+- [x] Modo Lead — agendar visita (log de atividade em `activities`/`tasks`)
+- [x] Modo Lead — marcar ganho/perdido/pausar
+- [x] Modo Lead completo, testado de ponta a ponta em ambiente real
 - [ ] Modo Locatário ativo — fora do MVP, fase futura
 - [x] Ícones finais (símbolo oficial da VOE em 16/48/128px)
 - [ ] Publicação na Chrome Web Store
