@@ -1,16 +1,19 @@
 // ActionMenu.tsx
 // "O que você quer fazer?" — versão compacta, pro espaço estreito da
 // sidebar, das ações reais da tela de Oportunidades do app.voeops.com
-// (mover etapa, anotação, agendar visita, marcar ganho/perdido/pausado).
-// Só um painel aberto por vez, em vez de empilhar todos os formulários.
+// (mover etapa, anotação, agendar visita, marcar vendido/perdido/pausado,
+// ver atividades). Só um painel aberto por vez, em vez de empilhar todos
+// os formulários.
 
 import { useState } from 'react'
 import { StageSelector } from './StageSelector'
 import { NotesForm } from './NotesForm'
 import { ScheduleVisitForm } from './ScheduleVisitForm'
 import { StatusActions } from './StatusActions'
+import { ActivitiesPanel } from './ActivitiesPanel'
+import { MessageLibraryPanel } from './MessageLibraryPanel'
 
-type ActionKey = 'stage' | 'note' | 'visit' | 'status'
+type ActionKey = 'stage' | 'note' | 'visit' | 'status' | 'activities' | 'messages'
 
 interface Props {
   opportunityId: string
@@ -26,7 +29,9 @@ const ACTIONS: { key: ActionKey; label: string }[] = [
   { key: 'stage', label: 'Mover etapa do funil' },
   { key: 'note', label: 'Criar anotação' },
   { key: 'visit', label: 'Agendar visita' },
-  { key: 'status', label: 'Marcar Ganho / Perdido / Pausar' },
+  { key: 'status', label: 'Marcar Vendido / Perdido / Pausar' },
+  { key: 'activities', label: 'Ver atividades' },
+  { key: 'messages', label: 'Modelos de mensagens' },
 ]
 
 export function ActionMenu({
@@ -82,6 +87,8 @@ export function ActionMenu({
                   onChanged={handleChanged}
                 />
               )}
+              {action.key === 'activities' && <ActivitiesPanel opportunityId={opportunityId} />}
+              {action.key === 'messages' && <MessageLibraryPanel />}
             </div>
           )}
         </div>

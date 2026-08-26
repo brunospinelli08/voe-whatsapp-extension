@@ -7,18 +7,12 @@ import type { ActiveChat } from '../hooks/useActiveChat'
 import { useLeadLookup } from '../hooks/useLeadLookup'
 import { ActionMenu } from './ActionMenu'
 import { CreateLeadForm } from './CreateLeadForm'
+import { OpportunityCard } from './OpportunityCard'
 import { Spinner } from './Spinner'
 
 interface Props {
   chat: ActiveChat
   workspaceId: string
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  active: 'Ativo',
-  won: 'Ganho',
-  lost: 'Perdido',
-  paused: 'Pausado',
 }
 
 export function LeadPanel({ chat, workspaceId }: Props) {
@@ -59,17 +53,8 @@ export function LeadPanel({ chat, workspaceId }: Props) {
       )}
 
       {!loading && !error && opportunity && (
-        <div className="card opportunity-detail">
-          <h2>{opportunity.name}</h2>
-          <div className="opportunity-meta">
-            <span className={`status-badge status-${opportunity.status}`}>
-              {STATUS_LABELS[opportunity.status] ?? opportunity.status}
-            </span>
-            {opportunity.pipeline && <span className="muted">{opportunity.pipeline.name}</span>}
-          </div>
-          {opportunity.status === 'lost' && opportunity.lost_reason && (
-            <p className="muted">Motivo: {opportunity.lost_reason}</p>
-          )}
+        <>
+          <OpportunityCard opportunity={opportunity} activeContact={contact} onLinked={refetch} />
 
           <ActionMenu
             opportunityId={opportunity.id}
@@ -80,7 +65,7 @@ export function LeadPanel({ chat, workspaceId }: Props) {
             contactId={opportunity.contacts[0]?.id ?? null}
             onChanged={refetch}
           />
-        </div>
+        </>
       )}
     </div>
   )

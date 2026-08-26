@@ -416,12 +416,54 @@ button.danger:hover:not(:disabled) {
   padding: 14px;
 }
 
-.opportunity-detail h2 {
+.opportunity-card h2 {
   font-family: var(--font-display);
   font-size: 15px;
   font-weight: 700;
   margin: 0 0 2px;
   color: hsl(var(--text-primary));
+}
+
+.opportunity-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  margin: 0 0 10px;
+}
+
+.opportunity-summary div {
+  min-width: 0;
+}
+
+.opportunity-summary dt {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: hsl(var(--text-secondary));
+  margin: 0 0 1px;
+}
+
+.opportunity-summary dd {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: hsl(var(--text-primary));
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.opportunity-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.opportunity-card-actions button {
+  flex: 1;
+  min-width: 120px;
 }
 
 .opportunity-meta {
@@ -556,6 +598,117 @@ button.danger:hover:not(:disabled) {
 .status-actions-buttons button {
   flex: 1;
   min-width: 100px;
+}
+
+/* ── Atividades ── */
+.activities-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.activity-item {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.activity-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.activity-type-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: hsl(var(--color-primary-dark));
+  background: hsl(var(--color-primary) / 0.1);
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
+.activity-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: hsl(var(--text-primary));
+  margin: 4px 0 2px;
+}
+
+/* ── Modelos de mensagens ── */
+.message-library-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.message-library-item {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.message-library-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: hsl(var(--text-primary));
+  margin-bottom: 4px;
+}
+
+.message-library-content {
+  font-size: 12px;
+  font-weight: 400;
+  color: hsl(var(--text-secondary));
+  margin: 0 0 8px;
+  white-space: pre-wrap;
+  line-height: 1.4;
+}
+
+.message-library-item button {
+  width: 100%;
+}
+
+/* ── Campos personalizados ── */
+.custom-field-checkbox {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 6px !important;
+  font-weight: 500 !important;
+}
+
+.custom-field-checkbox input[type='checkbox'] {
+  width: auto;
+}
+
+.custom-field-multiple-choice {
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.custom-field-multiple-choice legend {
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 0 4px;
 }
 
 @keyframes fadeIn {

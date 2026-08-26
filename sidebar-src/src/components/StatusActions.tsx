@@ -77,7 +77,7 @@ export function StatusActions({ opportunityId, workspaceId, currentStatus, onCha
       <div className="status-actions-buttons">
         {currentStatus !== 'won' && (
           <button disabled={saving} onClick={() => updateStatus('won')}>
-            {saving ? 'Salvando…' : 'Marcar como Ganho'}
+            {saving ? 'Salvando…' : 'Marcar como Vendido'}
           </button>
         )}
         {currentStatus !== 'lost' && (

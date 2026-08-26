@@ -1,11 +1,19 @@
 // CreateLeadForm.tsx
 // Cria um lead a partir do contato ativo do WhatsApp: contato -> oportunidade
 // -> vínculo entre os dois (POST /api/v1/opportunities/:id/contacts).
+//
+// Campos de Origem e campos personalizados são carregados dinamicamente do
+// workspace (useOriginOptions / useCustomFields) — igual o formulário real
+// de Nova Oportunidade do dashboard faz. Nenhum campo é hardcoded aqui além
+// de Nome, que é sempre fixo em qualquer workspace.
 
 import { FormEvent, useState } from 'react'
 import type { ActiveChat } from '../hooks/useActiveChat'
 import { voeApi } from '../lib/apiClient'
 import { supabase } from '../lib/supabaseClient'
+import { useOriginOptions } from '../hooks/useOriginOptions'
+import { useCustomFields } from '../hooks/useCustomFields'
+import { CustomFieldInput, type CustomFieldValue } from './CustomFieldInput'
 
 interface Props {
   chat: ActiveChat
@@ -39,11 +47,40 @@ async function getDefaultStageId(): Promise<string> {
 
 export function CreateLeadForm({ chat, existingContactId, onCreated }: Props) {
   const [name, setName] = useState(chat.name ?? '')
+  const [originId, setOriginId] = useState('')
+  const [customValues, setCustomValues] = useState<Record<string, CustomFieldValue>>({})
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const { origins } = useOriginOptions()
+  const { fields: customFields } = useCustomFields('deal')
+
+  function setCustomValue(label: string, value: CustomFieldValue) {
+    setCustomValues(prev => ({ ...prev, [label]: value }))
+  }
+
+  function missingRequiredField(): string | null {
+    for (const field of customFields) {
+      if (!field.required) continue
+      const value = customValues[field.label]
+      const empty =
+        value === undefined ||
+        value === '' ||
+        (Array.isArray(value) && value.length === 0) ||
+        (field.type === 'checkbox' && value !== true)
+      if (empty) return field.label
+    }
+    return null
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
+    const missing = missingRequiredField()
+    if (missing) {
+      setError(`Preencha o campo obrigatório "${missing}".`)
+      return
+    }
+
     setCreating(true)
     setError(null)
     try {
@@ -69,7 +106,12 @@ export function CreateLeadForm({ chat, existingContactId, onCreated }: Props) {
 
       const { data: opportunity } = await voeApi.post<{ data: { id: string } }>(
         '/api/v1/opportunities',
-        { name: `${name.trim() || chat.phone} (WhatsApp)`, stage_id: stageId, assigned_to: assignedTo },
+        {
+          name: `${name.trim() || chat.phone} (WhatsApp)`,
+          stage_id: stageId,
+          assigned_to: assignedTo,
+          origin_id: originId || null,
+        },
       )
 
       await voeApi.post(`/api/v1/opportunities/${opportunity.id}/contacts`, {
@@ -77,9 +119,14 @@ export function CreateLeadForm({ chat, existingContactId, onCreated }: Props) {
         is_primary_contact: true,
       })
 
-      // Registra a origem na timeline — não existe mais um campo `source`
-      // livre em opportunities (virou origin_id/UTMs), então isso fica
-      // registrado como anotação em vez de tentar mapear pra um dos dois.
+      // Campos personalizados do workspace (se algum foi preenchido) — via
+      // PUT /api/v1/opportunities/[id]/custom-fields, que já existia.
+      if (Object.keys(customValues).length > 0) {
+        await voeApi
+          .put(`/api/v1/opportunities/${opportunity.id}/custom-fields`, { fields: customValues })
+          .catch(() => {}) // best-effort — não trava a criação do lead se isso falhar
+      }
+
       await voeApi
         .post(`/api/v1/opportunities/${opportunity.id}/notes`, {
           content: 'Lead criado a partir da extensão de WhatsApp da VOE.',
@@ -100,6 +147,30 @@ export function CreateLeadForm({ chat, existingContactId, onCreated }: Props) {
         Nome
         <input value={name} onChange={e => setName(e.target.value)} placeholder={chat.phone} />
       </label>
+
+      {origins.length > 0 && (
+        <label>
+          Origem
+          <select value={originId} onChange={e => setOriginId(e.target.value)}>
+            <option value="">— selecione —</option>
+            {origins.map(origin => (
+              <option key={origin.id} value={origin.id}>
+                {origin.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
+      {customFields.map(field => (
+        <CustomFieldInput
+          key={field.id}
+          field={field}
+          value={customValues[field.label]}
+          onChange={value => setCustomValue(field.label, value)}
+        />
+      ))}
+
       <button type="submit" disabled={creating}>
         {creating ? 'Criando…' : 'Criar lead'}
       </button>

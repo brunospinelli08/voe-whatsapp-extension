@@ -30,6 +30,11 @@ export interface LeadOpportunity {
   pipeline?: { id: string; name: string } | null
   lost_reason: string | null
   contacts: LeadContact[]
+  /** Já vem prontos na resposta de GET /api/v1/opportunities — só precisou */
+  /** ser adicionado ao tipo aqui, nenhuma rota nova pra isso. */
+  total_value?: number
+  company?: { id: string; name: string } | null
+  owner?: { id: string; name: string } | null
 }
 
 interface LeadLookupState {
