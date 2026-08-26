@@ -134,9 +134,16 @@ esse token que autentica as chamadas a `/api/v1/opportunities`,
 - [ ] Publicação na Chrome Web Store
 
 **Modo Lead — fase 2 (expansão inspirada na extensão do RD Station, campos/nomenclatura 100% VOE):**
-implementado e buildado, **ainda não testado contra uma sessão real do WhatsApp Web** — pendente
-de validação visual antes de considerar concluído.
+em teste contra sessão real do WhatsApp Web. Primeira rodada de teste já achou um problema real
+(ver abaixo, corrigido) — itens marcados `[~]` ainda não tiveram uma nova rodada de validação
+depois da correção.
 
+- [x] **"Salvar contato" separado de "Criar oportunidade"** — o formulário original sempre criava
+      contato + oportunidade juntos por trás de um botão só ("Criar lead"), e ficava visualmente
+      idêntico a um formulário de contato em workspaces sem Origem/campos personalizados
+      configurados (só o campo Nome aparecia). Achado testando ao vivo: nem todo contato que fala
+      com a VOE deve virar uma oportunidade de venda. Agora são duas ações explícitas e distintas
+      (`SaveContactAction.tsx` / `CreateOpportunityForm.tsx`).
 - [~] Card da oportunidade enriquecido (empresa, responsável, valor) + "Adicionar contato à
       oportunidade" + "Abrir na VOE" (deep link pra `app.voeops.com/deals/[id]`)
 - [~] Aba de Atividades (somente leitura, via `GET /api/v1/tasks?opportunity_id=`)
