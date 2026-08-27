@@ -1,25 +1,21 @@
 // ActivitiesPanel.tsx
 // Aba "Atividades" — lista as atividades já registradas na oportunidade
 // (mesma tabela/nomenclatura do dashboard real, ver ActivityCard.tsx em
-// app.voeops.com) + "+ Nova atividade". Estado vazio (ícone + texto +
+// app.voeops.com) + "+ Nova atividade", que abre o NewActivityModal.tsx
+// (réplica do ActivityModal.tsx real). Estado vazio (ícone + texto +
 // botão) espelha exatamente o `panelTab === 1` de inbox/page.tsx.
-//
-// Decisão consciente de escopo: o botão "+ Nova atividade" do dashboard
-// real abre um modal genérico (ActivityModal, tipos task/call/email/
-// meeting/visit). Aqui ele abre o ScheduleVisitForm que a extensão já
-// tinha (POST /api/v1/tasks, type: 'visit') — cobre o caso de uso
-// principal do segmento (agendar visita), mas só cria atividades desse
-// tipo; não é um formulário genérico de qualquer tipo de atividade.
 
 import { useState } from 'react'
 import { useActivities } from '../hooks/useActivities'
-import { ScheduleVisitForm } from './ScheduleVisitForm'
+import { NewActivityModal } from './NewActivityModal'
 import { CalendarClockIcon, PlusIcon } from './Icons'
 import { Spinner } from './Spinner'
 
 interface Props {
   opportunityId: string
+  opportunityName: string
   contactId: string | null
+  contactName: string | null
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -35,6 +31,9 @@ const STATUS_LABELS: Record<string, string> = {
   agendada: 'Agendada',
   concluida: 'Concluída',
   cancelada: 'Cancelada',
+  // "pending" é o default legado da coluna no banco — não deveria aparecer
+  // em atividades novas (o modal sempre manda status: "agendada" agora),
+  // mas atividades antigas criadas antes dessa correção ainda têm isso.
   pending: 'Pendente',
   paused: 'Pausada',
 }
@@ -46,9 +45,9 @@ function formatWhen(dueDate: string | null, dueTime: string | null) {
   return dueTime ? `${formatted} · ${dueTime.substring(0, 5)}` : formatted
 }
 
-export function ActivitiesPanel({ opportunityId, contactId }: Props) {
+export function ActivitiesPanel({ opportunityId, opportunityName, contactId, contactName }: Props) {
   const { activities, loading, error, refetch } = useActivities(opportunityId)
-  const [showForm, setShowForm] = useState(false)
+  const [showModal, setShowModal] = useState(false)
 
   if (loading) return <Spinner label="Carregando atividades…" />
 
@@ -63,7 +62,7 @@ export function ActivitiesPanel({ opportunityId, contactId }: Props) {
 
   return (
     <div className="activities-panel">
-      {activities.length === 0 && !showForm && (
+      {activities.length === 0 && (
         <div className="activities-empty-state">
           <CalendarClockIcon size={28} className="activities-empty-icon" />
           <p className="muted">Nenhuma atividade ainda</p>
@@ -87,20 +86,19 @@ export function ActivitiesPanel({ opportunityId, contactId }: Props) {
         </ul>
       )}
 
-      {showForm ? (
-        <div className="activities-new-form">
-          <ScheduleVisitForm
-            opportunityId={opportunityId}
-            contactId={contactId}
-          />
-          <button className="secondary" onClick={() => { setShowForm(false); refetch() }}>
-            Fechar
-          </button>
-        </div>
-      ) : (
-        <button className="new-activity-btn" onClick={() => setShowForm(true)}>
-          <PlusIcon size={12} /> Nova atividade
-        </button>
+      <button className="new-activity-btn" onClick={() => setShowModal(true)}>
+        <PlusIcon size={12} /> Nova atividade
+      </button>
+
+      {showModal && (
+        <NewActivityModal
+          opportunityId={opportunityId}
+          opportunityName={opportunityName}
+          contactId={contactId}
+          contactName={contactName}
+          onClose={() => setShowModal(false)}
+          onCreated={refetch}
+        />
       )}
     </div>
   )

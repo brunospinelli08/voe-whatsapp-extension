@@ -5,9 +5,9 @@
 // "Atividades"), com o mesmo texto de estado vazio e a mesma dupla de
 // ações "⇄ Vincular"/"+ Nova" na seção Oportunidade.
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ActiveChat } from '../hooks/useActiveChat'
-import { useLeadLookup } from '../hooks/useLeadLookup'
+import { useLeadLookup, type LeadContact } from '../hooks/useLeadLookup'
 import { CreateOpportunityForm } from './CreateOpportunityForm'
 import { SaveContactAction } from './SaveContactAction'
 import { LinkExistingOpportunityForm } from './LinkExistingOpportunityForm'
@@ -16,21 +16,32 @@ import { ContactTagsEditor } from './ContactTagsEditor'
 import { ActivitiesPanel } from './ActivitiesPanel'
 import { MessageLibraryPanel } from './MessageLibraryPanel'
 import { Spinner } from './Spinner'
-import { AlertIcon, BriefcaseIcon, LinkIcon, PlusIcon, PhoneIcon, MailIcon, UserIcon } from './Icons'
+import { AlertIcon, BriefcaseIcon, Building2Icon, LinkIcon, PlusIcon, PhoneIcon, MailIcon, UserIcon } from './Icons'
 
 interface Props {
   chat: ActiveChat
   workspaceId: string
+  /** Reporta o contato ativo (e um jeito de recarregá-lo) pro App.tsx, que
+   * alimenta o menu "•••" no header — as ações desse menu (editar contato,
+   * empresa) são do contato, mas o botão em si mora no header do app, um
+   * nível acima de onde o lookup acontece. */
+  onContactContextChange?: (ctx: { contact: LeadContact; refetch: () => void } | null) => void
 }
 
 type LeadAction = 'new-opportunity' | 'new-contact' | 'link-opportunity' | null
 type PanelTab = 'contexto' | 'atividades'
 
-export function LeadPanel({ chat, workspaceId }: Props) {
+export function LeadPanel({ chat, workspaceId, onContactContextChange }: Props) {
   const { loading, error, contact, opportunity, searched, refetch } = useLeadLookup(chat.phone)
   const [action, setAction] = useState<LeadAction>(null)
   const [tab, setTab] = useState<PanelTab>('contexto')
   const [showMessages, setShowMessages] = useState(false)
+
+  useEffect(() => {
+    onContactContextChange?.(contact ? { contact, refetch } : null)
+    return () => onContactContextChange?.(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contact, refetch])
 
   function handleDone() {
     setAction(null)
@@ -104,6 +115,11 @@ export function LeadPanel({ chat, workspaceId }: Props) {
                       <span className="contact-meta"><MailIcon size={11} /> {contact.email}</span>
                     )}
                   </div>
+                  {contact.company?.name && (
+                    <p className="contact-company">
+                      <Building2Icon size={10} /> {contact.company.name}
+                    </p>
+                  )}
                   <ContactTagsEditor contact={contact} onChanged={refetch} />
                 </div>
               )}
@@ -193,7 +209,12 @@ export function LeadPanel({ chat, workspaceId }: Props) {
                   <p className="muted">Vincule uma oportunidade para gerenciar atividades</p>
                 </div>
               ) : (
-                <ActivitiesPanel opportunityId={opportunity.id} contactId={contact?.id ?? null} />
+                <ActivitiesPanel
+                  opportunityId={opportunity.id}
+                  opportunityName={opportunity.name}
+                  contactId={contact?.id ?? null}
+                  contactName={contact?.name ?? null}
+                />
               )}
             </div>
           )}

@@ -177,10 +177,9 @@ validação ao vivo depois de escritos.
         de campo de segmento (Tipo de evento etc.) de uma oportunidade já existente. Escrita usa o
         `PUT` genérico que já existia (aceita qualquer coluna do modelo).
   - **Aba Atividades**: estado vazio idêntico (ícone + "Nenhuma atividade ainda" + "+ Nova
-        atividade"). Lista real via `GET /api/v1/tasks?opportunity_id=` (já existia). Decisão de
-        escopo: "+ Nova atividade" abre `ScheduleVisitForm.tsx` (já existia, `POST /api/v1/tasks`
-        tipo `visit`) em vez do modal genérico do dashboard real (que cobre task/call/email/meeting/
-        visit) — cobre o caso de uso principal do segmento, não qualquer tipo de atividade.
+        atividade"). Lista real via `GET /api/v1/tasks?opportunity_id=` (já existia). "+ Nova
+        atividade" agora abre o modal completo — ver item abaixo (substituiu o `ScheduleVisitForm.tsx`
+        inline da rodada anterior, removido).
   - **"Modelos de mensagens"** (`MessageLibraryPanel.tsx`, já existia) não tem equivalente nas duas
         abas reais — não virou uma terceira aba falsa; movido pra um link discreto no cabeçalho do
         painel, fora da estrutura Contexto/Atividades.
@@ -192,9 +191,93 @@ validação ao vivo depois de escritos.
         (ao marcar Vendido) e no formulário de Nova Oportunidade, nunca como linha exibida/editável
         no Contexto ou na página de detalhe da oportunidade (`deals/[id]/page.tsx`, sem nenhuma
         ocorrência de "Unidade"). Não foi adicionado como campo aqui — ver resumo enviado ao Bruno.
+- [~] **Modal "Nova Atividade" (réplica do `ActivityModal.tsx` real, 2239 linhas)** — abre a partir
+      do "+ Nova atividade" da aba Atividades. Seletor de tipo com os mesmos 6 blocos (Tarefa,
+      WhatsApp, Ligação, E-mail, Reunião, Visita); Título/Descrição; Oportunidade e Contato exibidos
+      já preenchidos com o contexto ativo (não pede pra escolher de novo); Responsável (dropdown,
+      `useWorkspaceUsers`, pré-preenchido com o usuário logado — igual ao real); atalhos de "Quando"
+      (`lib/activityDatePresets.ts`, réplica linha a linha da lógica de `SmartDatePicker.tsx`: Hoje,
+      Amanhã 9h, Amanhã 14h, Em 1 hora, Próx. segunda, Próx. semana, + "Ontem" só pra Reunião/Visita,
+      igual ao real) com "Personalizar" abrindo `<input type="date">`/`<input type="time">` nativos
+      em vez do calendário completo; rodapé "Cancelar"/"Criar atividade". Valores de `type`
+      confirmados via schema real do Supabase (constraint `activities_type_check1`): exatamente
+      `task | whatsapp | call | email | meeting | visit`. `POST /api/v1/tasks` já existia (genérico,
+      sem endpoint novo) — testado ponta a ponta direto no banco de produção (insert simulando o
+      payload exato do modal, na oportunidade "Michel Spinelli (WhatsApp)" de teste, depois
+      removido).
+  - **Ligação/E-mail**: desabilitados com "Em breve", igual ao real (`ACTIVITY_TYPES` já marca os
+        dois `disabled: true` — nem a própria VOE os tem disponíveis).
+  - **WhatsApp desabilitado AQUI, diferente do real** (decisão consciente, não pedida
+        literalmente): no dashboard real, criar uma atividade WhatsApp exige canal + modelo/mensagem
+        (Cloud API ou Evolution) — todo o subsistema de agendamento de campanha, fora de escopo.
+        Criar sem isso geraria uma atividade "fantasma" que o worker de disparo nunca conseguiria
+        processar. Badge mostra "No dashboard" (não "Em breve", que seria impreciso — a VOE tem
+        WhatsApp agendado, só não nesta extensão).
+  - **Bug real encontrado e corrigido**: a coluna `status` de `activities` tem default `'pending'`
+        no banco (legado), mas todo o app real sempre manda `status: "agendada"` explicitamente no
+        insert — sem isso, uma atividade nova cai fora do bucket "pendente" que o dashboard usa pra
+        listar (`status === "agendada"`). O `ScheduleVisitForm.tsx` antigo (removido nesta rodada)
+        nunca mandava `status`, e por isso **5 visitas reais criadas via extensão em 2026-08-25 no
+        workspace de teste ficaram com `status: "pending"`**, mal classificadas no dashboard real —
+        achado confirmado direto no banco, não corrigido nesses 5 registros sem perguntar ao Bruno
+        primeiro. O modal novo sempre manda `status: "agendada"` explicitamente, corrigindo a causa
+        pra qualquer atividade criada daqui pra frente.
+  - **Fim do evento / dia inteiro** (reunião/visita, no real) não foi replicado — `due_date` +
+        `due_time` já bastam pra criar; ficam `null`.
 - [ ] Catálogo de Produtos (fotos/vídeos/mensagens) — **fora desta rodada por decisão consciente**:
       maior item novo do pedido, exige migration + UI de gestão nova no dashboard + endpoint v1,
       sem nenhuma especificação de upload/envio ainda. Fica pra uma rodada própria de planejamento.
+- [x] **Passada de design** (só CSS — nenhum componente/hook mudou de lugar ou de comportamento):
+      header com gradiente teal da marca (antes branco chapado), abas Contexto/Atividades viraram um
+      controle segmentado em pílula, fundo do app com halos de cor bem suaves, tela de login/escolha
+      de workspace com hero colorido + logo com glow + card elevado pro formulário, botões com sombra
+      e leve elevação no hover (com reset explícito pra chips/links/pílulas, que não devem ter esse
+      efeito), acento de cor nos títulos de seção e nos ícones de estado vazio. Validado renderizando
+      a tela de login e o topo do painel com Edge headless + amostragem de pixel — o texto pequeno
+      saiu com contraste pior no screenshot que no app de verdade (artefato conhecido de
+      `--disable-gpu`/fontes web em renderização headless, confirmado comparando com um teste de
+      controle), então o título deixou de usar texto com gradiente clipado (mais arriscado) e passou
+      pra cor sólida.
+- [x] **Correção de bug**: `overflow: hidden` adicionado na passada de design acima (achando que
+      precisava conter os halos de cor decorativos, o que nunca foi verdade — `background:` não vaza
+      da caixa sozinho) quebrou o scroll da tela de escolha de workspace, deixando workspaces mais
+      abaixo na lista inacessíveis. Trocado por `overflow-y: auto` + `justify-content: safe center`
+      (nunca `center` puro num flex column que pode ter overflow — deixa o topo do conteúdo
+      inacessível mesmo com o scroll funcionando). Testado forçando 21 workspaces numa tela de 700px.
+- [x] **Menu "•••" no header (`ContactActionsMenu.tsx`)** — substitui o antigo botão "Sair" isolado.
+      Abre um dropdown ancorado (hand-rolled: ref + clique fora + Esc — não existe um componente de
+      dropdown genérico no design system do app.voeops.com pra reaproveitar; `ConversationContextMenu.tsx`
+      de lá usa exatamente esse mesmo padrão à mão) com, nessa ordem: Editar contato, Desassociar
+      empresa, Criar empresa, Associar empresa, separador, **Sair** (vermelho, `--color-accent` — a
+      mesma cor que o app já usa pra ações destrutivas/erro, não uma cor nova). Itens do contato ficam
+      desabilitados sem um contato ativo; "Sair" sempre disponível. O contato ativo é reportado de
+      `LeadPanel.tsx` pro `App.tsx` (`onContactContextChange`), já que o botão mora no header, um
+      nível acima de onde o lookup do contato acontece.
+  - **Editar contato** (`EditContactModal.tsx`): réplica do `EditContactModal` real — que só existe
+        *inline* dentro de `ContextPanel.tsx` (Inbox), nunca foi um componente exportado — Nome*,
+        Telefone, E-mail, Cargo, Tipo de contato, Tags. `PUT /api/v1/contacts/:id` (genérico, já
+        existia, endpoint zero novo).
+  - **Desassociar empresa**: `PUT /api/v1/contacts/:id { company_id: null }` — mesmo endpoint
+        genérico. `company_id` é FK simples (um contato pertence no máximo a uma empresa, não é
+        relação N:N), então "desassociar" nunca foi mais que isso.
+  - **Criar empresa** (`CreateCompanyModal.tsx`): réplica exata do modal real "Nova Empresa"
+        (`companies/page.tsx`) — Nome*, Telefone/Email, Site/Instagram, CNPJ/Estado, Cidade, mesmos
+        placeholders da captura. `POST /api/v1/companies` (genérico, já existia). **Associação
+        automática confirmada no código real** antes de implementar (`contacts/[id]/page.tsx`,
+        `handleEditSubmit`): criar uma empresa a partir do contexto de um contato SEMPRE associa no
+        mesmo fluxo — primeiro cria a empresa, depois atualiza `contact.company_id` — sem passo manual
+        separado. Replicado exatamente assim aqui: `POST /api/v1/companies` seguido de
+        `PUT /api/v1/contacts/:id { company_id }`.
+  - **Associar empresa** (`AssociateCompanyModal.tsx`): busca empresas existentes via
+        `GET /api/v1/companies?search=` (já existia) reaproveitando `SearchSelect.tsx` (mesmo
+        componente já usado em `CompanySection.tsx`) + `PUT /api/v1/contacts/:id { company_id }`.
+  - **Esforço real: zero endpoints novos.** Só precisou de um join novo (`company:companies(id,name)`)
+        em `GET`/`PUT /api/v1/contacts` (app.voeops.com) — mesmo padrão aditivo do `segment_data`/
+        `unit_id` de uma rodada anterior — pra extensão saber o nome da empresa vinculada sem uma
+        chamada extra. Sem isso, "Desassociar" ainda funcionaria (só precisa saber que `company_id`
+        existe), mas o header não mostraria qual empresa é.
+  - **Empresa vinculada agora aparece no header do contato** (ícone + nome, mesma posição do
+        `ContextPanel.tsx` real) — não existia antes desta rodada.
 
 ## Ícones
 
