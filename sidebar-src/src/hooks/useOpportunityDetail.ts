@@ -60,7 +60,12 @@ export function useOpportunityDetail(opportunityId: string | null) {
     setError(null)
     try {
       const res = await voeApi.get<{ data: OpportunityDetail }>(`/api/v1/opportunities/${opportunityId}`)
-      setDetail(res.data)
+      // Defensivo: enquanto o PR que adiciona segment_data/unit_id em
+      // app.voeops.com não estiver mergeado e deployado, a API de produção
+      // ainda responde sem essas duas chaves — sem isso aqui, qualquer
+      // workspace com campos de segmento (ex: Espaço de Eventos) quebra em
+      // runtime ao tentar ler detail.segment_data[key].
+      setDetail({ ...res.data, segment_data: res.data.segment_data ?? {}, unit_id: res.data.unit_id ?? null })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar oportunidade')
     } finally {
