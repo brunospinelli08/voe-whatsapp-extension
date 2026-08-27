@@ -222,8 +222,24 @@ validação ao vivo depois de escritos.
         achado confirmado direto no banco, não corrigido nesses 5 registros sem perguntar ao Bruno
         primeiro. O modal novo sempre manda `status: "agendada"` explicitamente, corrigindo a causa
         pra qualquer atividade criada daqui pra frente.
+  - **Bug real encontrado e corrigido: dropdown de Responsável quebrado (vinha vazio)**. A busca da
+        sessão (usuário logado, pra pré-preencher) e a de `useWorkspaceUsers` são duas chamadas
+        assíncronas sem ordem garantida — o `<select>` renderizava sem nenhuma `<option>` até a lista
+        carregar (aparecia em branco/quebrado), e se o usuário logado fosse super admin (filtrado de
+        propósito por `/api/v1/workspace-users`, mesmo filtro do formulário real) o problema persistia
+        mesmo depois de carregar. `CreateOpportunityForm.tsx` já tinha essa proteção
+        (`{users.length > 0 && ...}`) nesse mesmo campo; `NewActivityModal.tsx` não tinha. Corrigido:
+        `<select>` desabilitado com opção "Carregando…" enquanto a lista não chega, e o Responsável
+        selecionado cai pro primeiro usuário da lista se o ID da sessão não for um usuário de verdade
+        do workspace.
   - **Fim do evento / dia inteiro** (reunião/visita, no real) não foi replicado — `due_date` +
         `due_time` já bastam pra criar; ficam `null`.
+- [x] **Botão "Voltar" no formulário de Nova/Vincular oportunidade e Novo contato** — clicar em
+      "+ Nova"/"⇄ Vincular"/"Novo contato" escondia os botões do cabeçalho da seção "Oportunidade" e
+      não colocava nada no lugar; a única saída era rolar até o fim do formulário (longo, no caso de
+      "Nova oportunidade") até achar o "Cancelar". Agora um "‹ Voltar" ocupa o lugar do título
+      "Oportunidade" enquanto o formulário está aberto — mesmo tratamento visual (versalete, mesmo
+      peso/tamanho), sem novo elemento solto na tela.
 - [ ] Catálogo de Produtos (fotos/vídeos/mensagens) — **fora desta rodada por decisão consciente**:
       maior item novo do pedido, exige migration + UI de gestão nova no dashboard + endpoint v1,
       sem nenhuma especificação de upload/envio ainda. Fica pra uma rodada própria de planejamento.

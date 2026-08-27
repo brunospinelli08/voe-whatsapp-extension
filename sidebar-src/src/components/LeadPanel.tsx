@@ -16,7 +16,7 @@ import { ContactTagsEditor } from './ContactTagsEditor'
 import { ActivitiesPanel } from './ActivitiesPanel'
 import { MessageLibraryPanel } from './MessageLibraryPanel'
 import { Spinner } from './Spinner'
-import { AlertIcon, BriefcaseIcon, Building2Icon, LinkIcon, PlusIcon, PhoneIcon, MailIcon, UserIcon } from './Icons'
+import { AlertIcon, BriefcaseIcon, Building2Icon, ChevronLeftIcon, LinkIcon, PlusIcon, PhoneIcon, MailIcon, UserIcon } from './Icons'
 
 interface Props {
   chat: ActiveChat
@@ -126,7 +126,13 @@ export function LeadPanel({ chat, workspaceId, onContactContextChange }: Props) 
 
               <div className="opportunity-section">
                 <div className="opportunity-section-header">
-                  <span className="block-title">Oportunidade</span>
+                  {action ? (
+                    <button className="back-button" onClick={() => setAction(null)}>
+                      <ChevronLeftIcon size={13} /> Voltar
+                    </button>
+                  ) : (
+                    <span className="block-title">Oportunidade</span>
+                  )}
                   {!action && (
                     <div className="opportunity-section-actions">
                       {contact && !opportunity && (

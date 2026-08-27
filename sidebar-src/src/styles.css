@@ -835,6 +835,36 @@ button.danger:hover:not(:disabled) {
   color: hsl(var(--color-primary)) !important;
 }
 
+/* ── Voltar (formulário de Nova/Vincular oportunidade ou Novo contato
+   aberto) — ocupa o lugar do título "Oportunidade" enquanto o formulário
+   está aberto, pra sempre ter como sair sem rolar até o fim do form. ── */
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0 -2px;
+  color: hsl(var(--text-secondary));
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: none;
+}
+
+.back-button:hover:not(:disabled) {
+  color: hsl(var(--color-primary));
+  background: none;
+  transform: none;
+  box-shadow: none;
+}
+
+.back-button svg {
+  flex-shrink: 0;
+}
+
 /* ── Alerta "Lead sem oportunidade" (caixa amarela) ── */
 .alert-amber {
   display: flex;

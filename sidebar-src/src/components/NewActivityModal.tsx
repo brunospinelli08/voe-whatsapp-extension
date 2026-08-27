@@ -86,6 +86,18 @@ export function NewActivityModal({ opportunityId, opportunityName, contactId, co
     })
   }, [])
 
+  // Bug corrigido: a busca da sessão (acima) e a de useWorkspaceUsers são
+  // duas chamadas assíncronas independentes, sem ordem garantida — o
+  // <select> abaixo ficava sem nenhuma <option> (ou com o usuário logado
+  // selecionado mas fora da lista, ex: super admin, que
+  // /api/v1/workspace-users filtra de propósito) até a lista carregar,
+  // aparecendo vazio/"quebrado". Assim que `users` chega, confirma que o
+  // ID atual é um usuário de verdade da lista; senão cai pro primeiro.
+  useEffect(() => {
+    if (users.length === 0) return
+    setAssignedTo(current => (current && users.some(u => u.id === current) ? current : users[0].id))
+  }, [users])
+
   const presets = buildActivityDatePresets(needsManualResult(type))
   const relativeLabel = formatRelativeLabel(dueDate, dueTime)
 
@@ -212,8 +224,14 @@ export function NewActivityModal({ opportunityId, opportunityName, contactId, co
           {/* ── Responsável ── */}
           <label>
             Responsável
-            <select value={assignedTo} onChange={e => setAssignedTo(e.target.value)}>
-              {users.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+            <select
+              value={assignedTo}
+              onChange={e => setAssignedTo(e.target.value)}
+              disabled={users.length === 0}
+            >
+              {users.length === 0
+                ? <option value="">Carregando…</option>
+                : users.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
             </select>
           </label>
 
