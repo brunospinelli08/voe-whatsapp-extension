@@ -22,6 +22,8 @@ export interface LeadContact {
   /** GET /api/v1/contacts?search= já retorna a linha inteira (select("*")) — só faltava tipar. */
   tags?: string[] | null
   contact_type?: 'lead' | 'cliente' | 'parceiro' | 'fornecedor' | 'outro' | null
+  /** "Cargo" no header do ContextPanel real. */
+  role_title?: string | null
 }
 
 export interface LeadOpportunity {

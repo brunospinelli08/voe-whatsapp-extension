@@ -383,20 +383,207 @@ button.danger:hover:not(:disabled) {
 .active-chat-header {
   display: flex;
   flex-direction: column;
-  margin-bottom: 14px;
-  padding-bottom: 12px;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
   border-bottom: 1px solid hsl(var(--border));
+}
+
+.active-chat-header-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .active-chat-header strong {
   font-family: var(--font-display);
   font-size: 15px;
   color: hsl(var(--text-primary));
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.messages-toggle {
+  font-size: 10.5px;
+  flex-shrink: 0;
+}
+
+.messages-panel-inline {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid hsl(var(--border));
 }
 
 .chat-phone {
   color: hsl(var(--text-secondary));
   font-size: 11.5px;
+}
+
+/* ── Tabs: Contexto / Atividades (espelha inbox/page.tsx) ── */
+.panel-tabs {
+  display: flex;
+  border-bottom: 1px solid hsl(var(--border));
+  margin: 0 -14px 14px;
+}
+
+.panel-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 8px 0 9px;
+  font-size: 12px;
+  font-weight: 600;
+  color: hsl(var(--text-secondary));
+  border-bottom: 2px solid transparent;
+}
+
+.panel-tab:hover:not(:disabled) {
+  background: none;
+  color: hsl(var(--text-primary));
+}
+
+.panel-tab.is-active {
+  color: hsl(var(--color-primary));
+  border-bottom-color: hsl(var(--color-primary));
+}
+
+.panel-tab-body {
+  animation: fadeIn 0.15s ease-out;
+}
+
+/* ── Header do contato (Nome | Cargo, Telefone/E-mail) ── */
+.contact-header-block {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid hsl(var(--border));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.contact-header-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.contact-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  color: hsl(var(--text-primary));
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contact-role {
+  font-size: 11.5px;
+  color: hsl(var(--text-secondary));
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.contact-role em {
+  font-style: normal;
+  opacity: 0.6;
+}
+
+.contact-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.contact-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  color: hsl(var(--text-secondary));
+}
+
+/* ── Seção Oportunidade (header fixo + ações Vincular/+ Nova) ── */
+.opportunity-section {
+  margin-bottom: 4px;
+}
+
+.opportunity-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.block-title {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: hsl(var(--text-secondary));
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.opportunity-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.opportunity-section-actions .link-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+}
+
+.opportunity-primary-action {
+  color: hsl(var(--color-primary)) !important;
+}
+
+/* ── Alerta "Lead sem oportunidade" (caixa amarela) ── */
+.alert-amber {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+
+.alert-amber svg {
+  color: #d97706;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.alert-amber p {
+  margin: 0;
+}
+
+/* ── Estado vazio: sem oportunidade vinculada ── */
+.opportunity-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 16px 0;
+  color: hsl(var(--text-secondary) / 0.5);
+}
+
+.opportunity-empty-state .muted {
+  color: hsl(var(--text-secondary));
 }
 
 .empty-state {
@@ -996,6 +1183,252 @@ button.danger:hover:not(:disabled) {
 .contact-tag-add:hover {
   border-color: hsl(var(--color-primary));
   color: hsl(var(--color-primary));
+}
+
+/* ── OpportunityDetail (bloco "Oportunidade" com vínculo) ── */
+.opportunity-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.opp-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.opp-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  color: hsl(var(--text-primary));
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.opp-external-link {
+  flex-shrink: 0;
+  color: hsl(var(--text-secondary));
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 4px;
+}
+
+.opp-external-link:hover {
+  color: hsl(var(--color-primary));
+  background: hsl(var(--surface-hover));
+}
+
+.opp-company {
+  margin: -6px 0 0;
+  font-size: 11px;
+  color: hsl(var(--text-secondary));
+}
+
+/* ── Status | Etapa (dropdowns lado a lado) ── */
+.status-stage-row {
+  display: flex;
+  gap: 8px;
+}
+
+.status-stage-select-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.status-stage-select {
+  width: 100%;
+  appearance: none;
+  padding: 6px 22px 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--surface-hover));
+  color: hsl(var(--text-primary));
+  text-align: center;
+  text-overflow: ellipsis;
+}
+
+.status-stage-select-wrap.status-active .status-stage-select {
+  background: hsl(var(--color-primary) / 0.12);
+  color: hsl(var(--color-primary-dark));
+  border-color: transparent;
+}
+
+.status-stage-select-wrap.status-won .status-stage-select {
+  background: hsl(var(--status-won) / 0.14);
+  color: hsl(var(--status-won));
+  border-color: transparent;
+}
+
+.status-stage-select-wrap.status-lost .status-stage-select {
+  background: hsl(var(--color-accent) / 0.12);
+  color: hsl(var(--color-accent));
+  border-color: transparent;
+}
+
+.status-stage-select-wrap.status-paused .status-stage-select {
+  background: hsl(var(--status-warning) / 0.14);
+  color: hsl(var(--status-warning));
+  border-color: transparent;
+}
+
+.status-stage-chevron {
+  position: absolute;
+  right: 7px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* ── Linhas de campo da oportunidade (label fixo + valor) ── */
+.opp-field-list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid hsl(var(--border) / 0.6);
+  padding-top: 4px;
+}
+
+.opp-field-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px solid hsl(var(--border) / 0.4);
+}
+
+.opp-field-row:last-child {
+  border-bottom: none;
+}
+
+.opp-field-label {
+  flex-shrink: 0;
+  width: 108px;
+  font-size: 11.5px;
+  color: hsl(var(--text-secondary));
+}
+
+.opp-field-value {
+  flex: 1;
+  min-width: 0;
+}
+
+.opp-field-static {
+  font-size: 12.5px;
+  color: hsl(var(--text-primary));
+}
+
+.opp-field-static.is-empty {
+  color: hsl(var(--text-secondary) / 0.5);
+}
+
+.opp-field-stars {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.opp-field-star-label {
+  font-size: 10.5px;
+  color: hsl(var(--text-secondary));
+}
+
+.opp-field-input,
+.opp-field-select {
+  width: 100%;
+  padding: 5px 8px;
+  font-size: 12px;
+  font-weight: 400;
+  border-radius: 6px;
+}
+
+.opp-field-checkbox {
+  width: auto;
+}
+
+/* ── Datas (Criado em / Ganho em / Perdido em) ── */
+.opp-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border-top: 1px solid hsl(var(--border) / 0.6);
+  padding-top: 8px;
+}
+
+.opp-date-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+}
+
+.opp-add-contact-btn {
+  width: 100%;
+}
+
+.opp-notes-block {
+  border-top: 1px solid hsl(var(--border) / 0.6);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.opp-notes-block .block-title {
+  display: block;
+}
+
+/* ── Aba Atividades ── */
+.activities-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.activities-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 28px 0;
+}
+
+.activities-empty-icon {
+  color: hsl(var(--text-secondary) / 0.4);
+}
+
+.new-activity-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  padding: 7px;
+  font-size: 11.5px;
+  font-weight: 500;
+  background: none;
+  color: hsl(var(--text-secondary));
+  border: 1px dashed hsl(var(--border));
+}
+
+.new-activity-btn:hover:not(:disabled) {
+  background: hsl(var(--surface-hover));
+  color: hsl(var(--text-primary));
+}
+
+.activities-new-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 /* ── Anotações ── */

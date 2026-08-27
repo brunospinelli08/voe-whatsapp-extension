@@ -136,9 +136,8 @@ esse token que autentica as chamadas a `/api/v1/opportunities`,
 - [ ] Publicação na Chrome Web Store
 
 **Modo Lead — fase 2 (expansão inspirada na extensão do RD Station, campos/nomenclatura 100% VOE):**
-em teste contra sessão real do WhatsApp Web. Primeira rodada de teste já achou um problema real
-(ver abaixo, corrigido) — itens marcados `[~]` ainda não tiveram uma nova rodada de validação
-depois da correção.
+em teste contra sessão real do WhatsApp Web. Itens marcados `[~]` ainda não tiveram uma rodada de
+validação ao vivo depois de escritos.
 
 - [x] **"Salvar contato" separado de "Criar oportunidade"** — o formulário original sempre criava
       contato + oportunidade juntos por trás de um botão só ("Criar lead"), e ficava visualmente
@@ -149,30 +148,50 @@ depois da correção.
       nada foi encontrado; "Nova oportunidade" e "Vincular oportunidade" (select com as
       oportunidades ativas em ordem alfabética, `LinkExistingOpportunityForm.tsx`) quando o contato
       já existe mas ainda não tem oportunidade.
-- [~] Card da oportunidade enriquecido (empresa, responsável, valor) + "Adicionar contato à
-      oportunidade" + "Abrir na VOE" (deep link pra `app.voeops.com/deals/[id]`)
-- [~] **Painel de contexto (réplica do Inbox real)**: Lead Score ("10 · Frio" — só quando o
-      workspace tem a feature ativa, plano Scale/Enterprise, `GET /api/v1/lead-scoring-config`),
-      tipo de contato + tags editáveis (`ContactTagsEditor.tsx`, via `PUT /api/v1/contacts/:id`
-      que já existia) e anotações agora **listadas** (antes só criava, nunca mostrava as
-      existentes). Mapeado campo a campo contra `ContextPanel.tsx` (2193 linhas) antes de
-      implementar — um item do texto colado ("status Concluída") não bateu com nenhum código real
-      e foi descartado como provável ruído de copiar-colar.
-- [~] Aba de Atividades (somente leitura, via `GET /api/v1/tasks?opportunity_id=`)
-- [~] Aba de Modelos de mensagens (somente leitura + copiar, via `GET /api/v1/message-library`,
-      endpoint novo em `app.voeops.com`) — **não envia direto pro WhatsApp**: enviar exigiria uma
-      ponte de mão dupla sidebar → content script → wa-js que não foi construída ainda (fora de
-      escopo desta rodada, ver decisão registrada na investigação)
-- [~] **Formulário de Nova Oportunidade completo** — replica campo a campo o formulário real do
+- [x] **Formulário de Nova Oportunidade completo** — replica campo a campo o formulário real do
       dashboard (`NewOpportunityModal.tsx`): Funil/Etapa, Responsável, Unidade, campos nativos do
       segmento do workspace (dinâmico — não hardcoded, funciona pra qualquer segmento), campos
       personalizados, Qualificação (estrelas com labels do workspace), Orçamento, Origem, Campanha,
-      Empresa (vincular/criar). Depende de 6 endpoints novos em `app.voeops.com`
-      (`campaign-options`, `qualification-labels`, `workspace-units`, `workspace-users`,
-      `segment-fields`, `contacts` com `dedupe`) — **branch
-      `feat/voe-extension-full-opportunity-form` ainda não revisada/mergeada**, não funciona em
-      produção até isso acontecer. Decisão consciente: a seção "Contato" do formulário real (Sem/
+      Empresa (vincular/criar). Decisão consciente: a seção "Contato" do formulário real (Sem/
       Vincular/Criar) não foi replicada — na extensão o contato é sempre o do WhatsApp ativo.
+- [~] **Sidebar reconstruída pra espelhar exatamente o painel real de Contexto/Atividades do Inbox**
+      (`inbox/page.tsx` linhas ~3637-3782 + `ContextPanel.tsx`, 2193 linhas — fonte de verdade
+      confirmada campo a campo, mais autoritativa que qualquer lista de campos usada em rodadas
+      anteriores). Duas abas fixas no topo, "Contexto" e "Atividades" (`LeadPanel.tsx`), substituindo
+      o antigo menu de ações único (`ActionMenu.tsx`, removido).
+  - **Aba Contexto**: header do contato (Nome, Cargo, Telefone, E-mail — `role_title`/`email` já
+        vinham do `select("*")` de `/api/v1/contacts`, só faltava exibir) + tipo/tags
+        (`ContactTagsEditor.tsx`, já existia). Seção "OPORTUNIDADE" com header fixo e ações
+        "⇄ Vincular"/"+ Nova"; estado vazio com a caixa de alerta amarela exata ("Lead sem
+        oportunidade. Crie ou vincule uma oportunidade.") quando o contato é um Lead, mais o estado
+        "Nenhuma oportunidade vinculada". Com oportunidade vinculada (`OpportunityDetail.tsx`, novo,
+        substitui `OpportunityCard.tsx`): nome + link "Abrir na VOE", empresa, dropdowns de
+        Status/Etapa lado a lado (`StatusStagePicker.tsx`, novo, substitui `StageSelector.tsx` +
+        `StatusActions.tsx`), depois os campos na mesma ordem do painel real — Lead Score,
+        Qualificação (estrelas), Orçamento estimado, Valor total (somente leitura), Origem, Campanha,
+        campos personalizados (`custom_fields`, por oportunidade — antes só apareciam no formulário
+        de criação, agora também editáveis aqui), campos nativos do segmento do workspace (dinâmico),
+        "Criado em"/"Ganho em"/"Perdido em", e Anotações (`NotesForm.tsx`, já existia). Endpoint
+        `GET /api/v1/opportunities` (lista e detalhe) **editado nesta rodada** em `app.voeops.com`
+        pra devolver `segment_data` e `unit_id`, que faltavam — sem isso não dava pra ler os valores
+        de campo de segmento (Tipo de evento etc.) de uma oportunidade já existente. Escrita usa o
+        `PUT` genérico que já existia (aceita qualquer coluna do modelo).
+  - **Aba Atividades**: estado vazio idêntico (ícone + "Nenhuma atividade ainda" + "+ Nova
+        atividade"). Lista real via `GET /api/v1/tasks?opportunity_id=` (já existia). Decisão de
+        escopo: "+ Nova atividade" abre `ScheduleVisitForm.tsx` (já existia, `POST /api/v1/tasks`
+        tipo `visit`) em vez do modal genérico do dashboard real (que cobre task/call/email/meeting/
+        visit) — cobre o caso de uso principal do segmento, não qualquer tipo de atividade.
+  - **"Modelos de mensagens"** (`MessageLibraryPanel.tsx`, já existia) não tem equivalente nas duas
+        abas reais — não virou uma terceira aba falsa; movido pra um link discreto no cabeçalho do
+        painel, fora da estrutura Contexto/Atividades.
+  - **Removido por não ter equivalente no painel real** (nenhum campo desses chegou a ir pra
+        produção — eram só do formulário de criação/campo antigo, nunca do painel de contexto):
+        nada precisou ser removido nesta rodada além do próprio `ActionMenu.tsx`/`OpportunityCard.tsx`
+        /`StageSelector.tsx`/`StatusActions.tsx`, todos substituídos pelos componentes acima.
+  - **"Unidade" não é um campo do painel de Contexto real** — aparece só dentro do `WonLostModal`
+        (ao marcar Vendido) e no formulário de Nova Oportunidade, nunca como linha exibida/editável
+        no Contexto ou na página de detalhe da oportunidade (`deals/[id]/page.tsx`, sem nenhuma
+        ocorrência de "Unidade"). Não foi adicionado como campo aqui — ver resumo enviado ao Bruno.
 - [ ] Catálogo de Produtos (fotos/vídeos/mensagens) — **fora desta rodada por decisão consciente**:
       maior item novo do pedido, exige migration + UI de gestão nova no dashboard + endpoint v1,
       sem nenhuma especificação de upload/envio ainda. Fica pra uma rodada própria de planejamento.
