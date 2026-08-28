@@ -18,6 +18,12 @@ function injectSidebar() {
   const iframe = document.createElement('iframe')
   iframe.id = 'voe-sidebar-frame'
   iframe.src = chrome.runtime.getURL('sidebar/index.html')
+  // Sem isso, getUserMedia (gravação de áudio pra agendar mensagem) é
+  // bloqueado por padrão dentro de um iframe cross-origin — mesmo sendo um
+  // iframe da própria extensão, embutido numa página de terceiro
+  // (web.whatsapp.com) ele ainda precisa da permissão delegada
+  // explicitamente via Permissions Policy.
+  iframe.allow = 'microphone'
   iframe.style.cssText = `
     position: fixed;
     top: 0;

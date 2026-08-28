@@ -22,6 +22,14 @@ export interface LeadContact {
   /** GET /api/v1/contacts?search= já retorna a linha inteira (select("*")) — só faltava tipar. */
   tags?: string[] | null
   contact_type?: 'lead' | 'cliente' | 'parceiro' | 'fornecedor' | 'outro' | null
+  /** "Cargo" no header do ContextPanel real. */
+  role_title?: string | null
+  /** Empresa vinculada — `company_id` já vinha em qualquer `select("*")`;
+   * o objeto `company` (nome) precisou de um join novo em
+   * GET/PUT /api/v1/contacts (app.voeops.com), igual ao que fizemos com
+   * segment_data/unit_id nas oportunidades. */
+  company_id?: string | null
+  company?: { id: string; name: string } | null
 }
 
 export interface LeadOpportunity {

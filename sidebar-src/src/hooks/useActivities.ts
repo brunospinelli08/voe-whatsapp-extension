@@ -9,7 +9,16 @@
 // /api/v1/activities na verdade escreve em contact_events (rota legada,
 // ver comentário no arquivo). É /api/v1/tasks que lê/escreve na tabela
 // `activities` de verdade — confirmado batendo com o schema real do
-// Supabase antes de usar isso aqui. Só leitura por enquanto.
+// Supabase antes de usar isso aqui.
+//
+// cancelActivity/sendNowActivity (fase 4 do agendamento de mensagens) via
+// PUT /api/v1/tasks/[id] (endpoint já existente, aceita update parcial) —
+// mesma semântica exata de cancelActivity/sendNowActivity em
+// useNewActivities.ts (app.voeops.com): cancelar só muda status pra
+// "cancelada" (não deleta); "enviar agora" adianta scheduled_at pra agora
+// mantendo status "agendada", o scheduler.worker pega na próxima passada
+// (≤30s) pelo mesmo fluxo de envio normal — não é um caminho de envio à
+// parte.
 
 import { useCallback, useEffect, useState } from 'react'
 import { voeApi } from '../lib/apiClient'
@@ -55,5 +64,24 @@ export function useActivities(opportunityId: string | null) {
     fetchActivities()
   }, [fetchActivities])
 
-  return { activities, loading, error, refetch: fetchActivities }
+  const cancelActivity = useCallback(async (id: string) => {
+    await voeApi.put(`/api/v1/tasks/${id}`, {
+      status: 'cancelada',
+      cancelled_at: new Date().toISOString(),
+    })
+    await fetchActivities()
+  }, [fetchActivities])
+
+  const sendNowActivity = useCallback(async (id: string) => {
+    const now = new Date()
+    const pad = (n: number) => String(n).padStart(2, '0')
+    await voeApi.put(`/api/v1/tasks/${id}`, {
+      scheduled_at: now.toISOString(),
+      due_date: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
+      due_time: `${pad(now.getHours())}:${pad(now.getMinutes())}`,
+    })
+    await fetchActivities()
+  }, [fetchActivities])
+
+  return { activities, loading, error, refetch: fetchActivities, cancelActivity, sendNowActivity }
 }

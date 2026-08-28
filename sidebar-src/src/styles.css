@@ -37,10 +37,32 @@
 body {
   margin: 0;
   font-family: var(--font-body);
-  background: hsl(var(--background));
+  /* Fundo com leve textura de cor (halos de ciano/coral bem suaves) em vez
+     de cinza chapado — os cards brancos continuam se destacando por cima. */
+  background:
+    radial-gradient(560px 320px at -8% -12%, hsl(var(--color-primary) / 0.10), transparent 60%),
+    radial-gradient(420px 260px at 108% 6%, hsl(var(--color-accent) / 0.06), transparent 55%),
+    hsl(var(--background));
+  background-attachment: fixed;
   color: hsl(var(--text-primary));
   height: 100vh;
   font-size: 13.5px;
+}
+
+/* ── Scrollbar (webkit) — fina e discreta, some quando não precisa ── */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--color-primary) / 0.22);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--color-primary) / 0.4);
 }
 
 #root {
@@ -136,37 +158,76 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  padding: 28px 24px;
-  animation: fadeIn 0.2s ease-out;
+  justify-content: safe center;
+  padding: 32px 24px;
+  animation: fadeIn 0.25s ease-out;
+  position: relative;
+  /* overflow-y: auto (nunca "hidden") — o fundo abaixo é só `background:`,
+     nunca precisou cortar nada; "hidden" aqui já quebrou o scroll da tela
+     de workspace numa rodada anterior. Mantido como lição pros dois. */
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Fundo hero com dois halos de cor (ciano da marca + coral de destaque),
+     bem mais presente que o resto do app — é a primeira coisa que se vê. */
+  background:
+    radial-gradient(420px 320px at 12% -10%, hsl(var(--color-primary) / 0.22), transparent 60%),
+    radial-gradient(360px 300px at 105% 15%, hsl(var(--color-accent) / 0.14), transparent 55%),
+    radial-gradient(500px 380px at 50% 120%, hsl(var(--color-primary-light) / 0.14), transparent 60%);
 }
 
 .brand-icon-large {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   object-fit: contain;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+  padding: 8px;
+  background: hsl(var(--card));
+  border-radius: 16px;
+  box-shadow: 0 6px 20px hsl(var(--color-primary) / 0.25), 0 0 0 1px hsl(var(--border));
+  position: relative;
+  z-index: 1;
 }
 
 .login-screen h1,
 .workspace-selector h1 {
   font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 19px;
+  font-weight: 800;
+  font-size: 21px;
   margin: 0 0 4px;
-  color: hsl(var(--text-primary));
+  /* Sólido em vez de texto com gradiente clipado: mais garantido de ficar
+     legível em qualquer contexto de renderização — ainda assim um teal
+     bem mais saturado/escuro que o cinza-texto padrão do resto do app. */
+  color: hsl(var(--color-primary-dark));
+  position: relative;
+  z-index: 1;
 }
 
 .login-subtitle {
   color: hsl(var(--text-secondary));
   font-size: 12.5px;
-  margin-bottom: 20px;
+  margin-bottom: 22px;
+  position: relative;
+  z-index: 1;
+  max-width: 30ch;
 }
 
 .login-screen form {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  background: hsl(var(--card) / 0.9);
+  backdrop-filter: blur(6px);
+  border: 1px solid hsl(var(--border) / 0.7);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+  position: relative;
+  z-index: 1;
+}
+
+.login-screen form button[type='submit'] {
+  margin-top: 4px;
+  box-shadow: 0 4px 14px hsl(var(--color-primary) / 0.35);
 }
 
 .login-screen label,
@@ -187,13 +248,15 @@ body {
 }
 
 .app-header {
-  padding: 10px 14px;
-  border-bottom: 1px solid hsl(var(--border));
-  background: hsl(var(--card));
+  padding: 11px 14px;
+  background: linear-gradient(120deg, hsl(var(--color-primary)) 0%, hsl(var(--color-primary-dark)) 100%);
+  box-shadow: 0 2px 10px hsl(var(--color-primary) / 0.25);
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 10px;
+  position: relative;
+  z-index: 1;
 }
 
 .app-header-brand {
@@ -204,10 +267,14 @@ body {
 }
 
 .app-header-logo {
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   object-fit: contain;
   flex-shrink: 0;
+  background: #fff;
+  border-radius: 8px;
+  padding: 3px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
 }
 
 .app-header-text {
@@ -221,14 +288,14 @@ body {
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 13px;
-  color: hsl(var(--text-primary));
+  color: #fff;
   white-space: nowrap;
 }
 
 .workspace-name {
   font-size: 11px;
   text-align: left;
-  color: hsl(var(--text-secondary));
+  color: hsl(0 0% 100% / 0.75);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -236,7 +303,138 @@ body {
 }
 
 .workspace-name:hover {
-  color: hsl(var(--color-primary));
+  color: #fff;
+}
+
+.app-header .link-button {
+  color: hsl(0 0% 100% / 0.8);
+}
+
+.app-header .link-button:hover {
+  color: #fff;
+}
+
+/* ── Menu "•••" do header (ContactActionsMenu.tsx) — substitui o antigo
+   botão "Sair" isolado; "Sair" mora agora dentro dele, no fim, em
+   destaque vermelho. ── */
+.header-menu {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.header-menu-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  background: hsl(0 0% 100% / 0.12);
+  color: #fff;
+  border-radius: 7px;
+  box-shadow: none;
+}
+
+.header-menu-trigger:hover {
+  background: hsl(0 0% 100% / 0.22);
+  transform: none;
+  box-shadow: none;
+}
+
+.header-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 190px;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.18);
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  z-index: 60;
+  animation: fadeIn 0.12s ease-out;
+}
+
+.header-menu-dropdown button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 9px;
+  background: none;
+  color: hsl(var(--text-primary));
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+.header-menu-dropdown button:hover:not(:disabled) {
+  background: hsl(var(--surface-hover));
+  transform: none;
+  box-shadow: none;
+}
+
+.header-menu-dropdown button:disabled {
+  opacity: 0.35;
+}
+
+.header-menu-dropdown button svg {
+  flex-shrink: 0;
+  color: hsl(var(--text-secondary));
+}
+
+.header-menu-separator {
+  height: 1px;
+  background: hsl(var(--border));
+  margin: 4px 2px;
+}
+
+.header-menu-danger {
+  color: hsl(var(--color-accent)) !important;
+}
+
+.header-menu-danger svg {
+  color: hsl(var(--color-accent)) !important;
+}
+
+.header-menu-danger:hover:not(:disabled) {
+  background: hsl(var(--color-accent) / 0.08) !important;
+}
+
+.header-menu-error {
+  position: fixed;
+  top: 54px;
+  left: 10px;
+  right: 10px;
+  z-index: 70;
+}
+
+/* ── Empresa vinculada, no header do contato (linha só aparece quando há) ── */
+.contact-company {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: -2px 0 0;
+  font-size: 10.5px;
+  color: hsl(var(--text-secondary));
+}
+
+/* ── Par de campos lado a lado (modais de empresa) ── */
+.field-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.field-hint {
+  font-size: 10px;
+  font-weight: 400;
+  color: hsl(var(--text-secondary) / 0.7);
 }
 
 .link-button {
@@ -293,30 +491,73 @@ button {
   background: hsl(var(--color-primary));
   color: #fff;
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.1s ease;
+  box-shadow: 0 1px 2px hsl(var(--color-primary) / 0.25);
+  transition: background 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
 }
 
 button:hover:not(:disabled) {
   background: hsl(var(--color-primary-dark));
+  box-shadow: 0 3px 10px hsl(var(--color-primary) / 0.32);
+  transform: translateY(-1px);
 }
 
 button:active:not(:disabled) {
-  transform: scale(0.98);
+  transform: scale(0.98) translateY(0);
+  box-shadow: 0 1px 2px hsl(var(--color-primary) / 0.25);
 }
 
 button:disabled {
   opacity: 0.5;
   cursor: default;
+  box-shadow: none;
 }
 
 button.secondary {
   background: hsl(var(--surface-hover));
   color: hsl(var(--text-primary));
   border: 1px solid hsl(var(--border));
+  box-shadow: none;
 }
 
 button.secondary:hover:not(:disabled) {
   background: hsl(var(--border) / 0.6);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+/* A sombra/elevação acima é só pros botões de ação "sólidos" (submit,
+   .secondary, .danger). Chips, pílulas e botões-link usam <button> por
+   semântica mas visualmente são achatados — sem isso herdariam a sombra
+   e o "levantar" no hover sem fazer sentido ali. */
+.link-button,
+.pipeline-chip,
+.contact-type-chip,
+.contact-type-badge,
+.contact-tag-add,
+.contact-tag button,
+.panel-tab,
+.activity-preset-pill,
+.activity-type-btn,
+.qualification-star,
+.search-select-results button,
+.action-menu-item,
+.action-menu-chevron,
+.activity-modal-close {
+  box-shadow: none;
+}
+
+.link-button:hover:not(:disabled),
+.pipeline-chip:hover:not(:disabled),
+.contact-type-chip:hover:not(:disabled),
+.contact-tag-add:hover:not(:disabled),
+.contact-tag button:hover:not(:disabled),
+.panel-tab:hover:not(:disabled),
+.activity-preset-pill:hover:not(:disabled),
+.activity-type-btn:hover:not(:disabled),
+.qualification-star:hover:not(:disabled),
+.search-select-results button:hover:not(:disabled),
+.activity-modal-close:hover:not(:disabled) {
+  box-shadow: none;
+  transform: none;
 }
 
 button.danger {
@@ -332,9 +573,29 @@ button.danger:hover:not(:disabled) {
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  padding: 28px 24px;
-  animation: fadeIn 0.2s ease-out;
+  /* "safe center": centraliza quando a lista cabe na tela (poucos
+     workspaces), mas cai pro alinhamento no topo quando não cabe — sem o
+     "safe", um flex column centralizado pode deixar o topo do conteúdo
+     inacessível mesmo com scroll (limitação conhecida de
+     justify-content:center + overflow). Suportado no Chromium (motor do
+     WhatsApp Web). */
+  justify-content: safe center;
+  padding: 32px 24px;
+  animation: fadeIn 0.25s ease-out;
+  position: relative;
+  /* Nunca "hidden" aqui — o fundo abaixo é só `background:`, não precisa
+     cortar nada, e "hidden" já quebrou o scroll desta tela numa rodada
+     anterior (workspaces mais abaixo na lista ficavam inacessíveis). */
+  overflow-y: auto;
+  overflow-x: hidden;
+  background:
+    radial-gradient(420px 320px at 12% -10%, hsl(var(--color-primary) / 0.22), transparent 60%),
+    radial-gradient(360px 300px at 105% 15%, hsl(var(--color-accent) / 0.14), transparent 55%);
+}
+
+.workspace-selector > * {
+  position: relative;
+  z-index: 1;
 }
 
 .workspace-list {
@@ -352,15 +613,20 @@ button.danger:hover:not(:disabled) {
   background: hsl(var(--card));
   color: hsl(var(--text-primary));
   border: 1px solid hsl(var(--border));
+  border-left: 3px solid hsl(var(--color-primary) / 0.5);
   border-radius: var(--radius-card);
   padding: 12px 14px;
   cursor: pointer;
   font-weight: 400;
   box-shadow: var(--shadow-card);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
 .workspace-card:hover:not(:disabled) {
   border-color: hsl(var(--color-primary));
+  border-left-color: hsl(var(--color-primary));
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px hsl(var(--color-primary) / 0.16);
 }
 
 .workspace-card-name {
@@ -383,20 +649,283 @@ button.danger:hover:not(:disabled) {
 .active-chat-header {
   display: flex;
   flex-direction: column;
-  margin-bottom: 14px;
-  padding-bottom: 12px;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
   border-bottom: 1px solid hsl(var(--border));
+}
+
+.active-chat-header-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .active-chat-header strong {
   font-family: var(--font-display);
   font-size: 15px;
   color: hsl(var(--text-primary));
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
+/* No lado direito da linha do nome, uma embaixo da outra (não lado a
+   lado — lado a lado disputava espaço com o nome na mesma linha). */
 .chat-phone {
   color: hsl(var(--text-secondary));
   font-size: 11.5px;
+}
+
+/* ── Tabs: Contexto / Atividades (espelha inbox/page.tsx) — controle
+   segmentado em pílula, mesmas duas abas/ordem/clique de sempre, só com
+   mais cara de produto. ── */
+.panel-tabs {
+  display: flex;
+  gap: 3px;
+  background: hsl(var(--surface-hover));
+  border: 1px solid hsl(var(--border) / 0.6);
+  border-radius: 10px;
+  padding: 3px;
+  margin: 0 0 14px;
+}
+
+.panel-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  border-radius: 7px;
+  padding: 7px 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: hsl(var(--text-secondary));
+  transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.panel-tab:hover:not(:disabled) {
+  background: hsl(var(--card) / 0.6);
+  color: hsl(var(--text-primary));
+}
+
+.panel-tab.is-active {
+  background: hsl(var(--card));
+  color: hsl(var(--color-primary-dark));
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.panel-tab.is-active:hover {
+  background: hsl(var(--card));
+}
+
+.panel-tab-body {
+  animation: fadeIn 0.15s ease-out;
+}
+
+/* ── Header do contato (Nome | Cargo, Telefone/E-mail) ── */
+.contact-header-block {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid hsl(var(--border));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.contact-header-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.contact-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  color: hsl(var(--text-primary));
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contact-role {
+  font-size: 11.5px;
+  color: hsl(var(--text-secondary));
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.contact-role em {
+  font-style: normal;
+  opacity: 0.6;
+}
+
+.contact-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.contact-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  color: hsl(var(--text-secondary));
+}
+
+/* ── Seção Oportunidade (header fixo + ações Vincular/+ Nova) ── */
+.opportunity-section {
+  margin-bottom: 4px;
+}
+
+.opportunity-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.block-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: hsl(var(--text-secondary));
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.block-title::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: hsl(var(--color-primary));
+  flex-shrink: 0;
+}
+
+.opportunity-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.opportunity-section-actions .link-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+}
+
+.opportunity-primary-action {
+  color: hsl(var(--color-primary)) !important;
+}
+
+/* ── Voltar (formulário de Nova/Vincular oportunidade ou Novo contato
+   aberto) — ocupa o lugar do título "Oportunidade" enquanto o formulário
+   está aberto, pra sempre ter como sair sem rolar até o fim do form. ── */
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0 -2px;
+  color: hsl(var(--text-secondary));
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: none;
+}
+
+.back-button:hover:not(:disabled) {
+  color: hsl(var(--color-primary));
+  background: none;
+  transform: none;
+  box-shadow: none;
+}
+
+.back-button svg {
+  flex-shrink: 0;
+}
+
+/* Variante vermelha — pedido explícito, pra "páginas sem saída" (troca de
+   tela inteira dentro do fluxo de agendamento: escolher modelo, criar
+   modelo) terem uma saída óbvia, mais chamativa que o .back-button cinza
+   padrão (usado nos formulários de Oportunidade/Contato, esse continua
+   como está — não é o que ficava "sem saída"). */
+.back-button-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0 -2px;
+  color: hsl(0 70% 55%);
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: none;
+}
+
+.back-button-danger:hover:not(:disabled) {
+  color: hsl(0 70% 45%);
+  background: none;
+  transform: none;
+  box-shadow: none;
+}
+
+.back-button-danger svg {
+  flex-shrink: 0;
+}
+
+/* ── Alerta "Lead sem oportunidade" (caixa amarela) ── */
+.alert-amber {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+
+.alert-amber svg {
+  color: #d97706;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.alert-amber p {
+  margin: 0;
+}
+
+/* ── Estado vazio: sem oportunidade vinculada ── */
+.opportunity-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 16px 0;
+  color: hsl(var(--color-primary) / 0.35);
+}
+
+.opportunity-empty-state .muted {
+  color: hsl(var(--text-secondary));
 }
 
 .empty-state {
@@ -604,6 +1133,13 @@ button.danger:hover:not(:disabled) {
   gap: 6px;
 }
 
+.create-opportunity-form-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
 /* ── Escolha entre ações (ex: Nova oportunidade / Novo contato) — a
    primeira opção (ação principal) sempre em cima, com destaque; a
    secundária embaixo, discreta. ── */
@@ -632,8 +1168,15 @@ button.danger:hover:not(:disabled) {
 .activity-item {
   background: hsl(var(--card));
   border: 1px solid hsl(var(--border));
+  border-left: 3px solid hsl(var(--color-primary) / 0.4);
   border-radius: 8px;
   padding: 8px 10px;
+  transition: box-shadow 0.15s ease, border-left-color 0.15s ease;
+}
+
+.activity-item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border-left-color: hsl(var(--color-primary));
 }
 
 .activity-item-header {
@@ -661,45 +1204,784 @@ button.danger:hover:not(:disabled) {
   margin: 4px 0 2px;
 }
 
-/* ── Modelos de mensagens ── */
-.message-library-list {
+.activity-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid hsl(var(--border));
+}
+
+.activity-item-actions .link-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.activity-item-actions .link-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.activity-cancel-btn {
+  color: hsl(0 70% 55%);
+}
+
+.activity-cancel-btn:hover:not(:disabled) {
+  color: hsl(0 70% 45%);
+}
+
+/* ── Modelos de mensagens (réplica visual de MessageCenterPanel.tsx —
+   header com contagem, busca, cards compactos com ações só no hover) ── */
+.message-library-create-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  padding: 0;
+  color: hsl(var(--color-primary));
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.message-library-create-btn:hover {
+  text-decoration: underline;
+}
+
+.message-library-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.message-library-search svg {
+  position: absolute;
+  left: 9px;
+  color: hsl(var(--text-secondary) / 0.5);
+  pointer-events: none;
+}
+
+.message-library-search input {
+  width: 100%;
+  padding: 7px 26px;
+  font-size: 11.5px;
+  font-weight: 400;
+}
+
+.message-library-search button {
+  position: absolute;
+  right: 7px;
+  background: none;
+  border: none;
+  padding: 0;
+  color: hsl(var(--text-secondary));
+  cursor: pointer;
+}
+
+.message-library-fav {
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+/* ── Agendar mensagem (réplica visual de ScheduleDropdown.tsx +
+   SmartDatePicker.tsx do app.voeops.com) ── */
+.schedule-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 12.5px;
+}
+
+.schedule-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: hsl(var(--text-primary));
+  padding-bottom: 8px;
+  border-bottom: 1px solid hsl(var(--border) / 0.6);
+}
+
+.schedule-panel-header svg {
+  color: hsl(var(--color-primary));
+}
+
+.schedule-content-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: hsl(var(--surface-hover) / 0.5);
+  border: 1px solid hsl(var(--border));
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.schedule-textarea {
+  width: 100%;
+  font-size: 12px;
+  font-weight: 400;
+  resize: vertical;
+}
+
+.schedule-channel-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.schedule-channel-row span {
+  color: hsl(var(--text-secondary));
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.schedule-channel-row select {
+  flex: 1;
+  min-width: 0;
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 5px 8px;
+}
+
+.schedule-media-preview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  padding: 7px 9px;
+  font-size: 11.5px;
+}
+
+.schedule-media-badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  background: hsl(var(--color-primary) / 0.1);
+  color: hsl(var(--color-primary-dark));
+  border-radius: 999px;
+  padding: 2px 7px;
+  white-space: nowrap;
+}
+
+.schedule-media-preview strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.schedule-media-preview .link-button {
+  flex-shrink: 0;
+  font-size: 10px;
+}
+
+.schedule-use-template-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 0;
+  color: hsl(var(--color-primary));
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.schedule-use-template-btn:hover {
+  text-decoration: underline;
+}
+
+.schedule-template-tag {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: hsl(var(--color-primary) / 0.06);
+  border: 1px solid hsl(var(--color-primary) / 0.15);
+  color: hsl(var(--color-primary-dark));
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.schedule-template-tag span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.schedule-template-tag .link-button {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  color: hsl(var(--color-primary-dark));
+}
+
+/* ── CreateTemplateScreen.tsx (criar modelo de mensagem novo) ── */
+.template-type-row {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.template-type-btn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  padding: 7px 4px;
+  color: hsl(var(--text-secondary));
+  font-size: 9.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.template-type-btn:hover {
+  background: hsl(var(--surface-hover));
+}
+
+.template-type-btn.is-active {
+  border-color: hsl(var(--color-primary));
+  background: hsl(var(--color-primary) / 0.08);
+  color: hsl(var(--color-primary-dark));
+}
+
+/* ── TemplatePickerInline.tsx (escolher modelo de dentro do agendamento) ── */
+.template-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.template-picker-header span {
+  font-size: 12px;
+  font-weight: 700;
+  color: hsl(var(--text-primary));
+}
+
+.template-picker-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
+  gap: 2px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.template-picker-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
   gap: 8px;
-}
-
-.message-library-item {
-  background: hsl(var(--card));
-  border: 1px solid hsl(var(--border));
+  background: none;
+  border: none;
   border-radius: 8px;
-  padding: 10px;
+  padding: 7px 8px;
+  text-align: left;
+  cursor: pointer;
 }
 
-.message-library-item-header {
+.template-picker-item:hover {
+  background: hsl(var(--surface-hover));
+}
+
+.template-picker-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  color: hsl(var(--color-primary));
+}
+
+.template-picker-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.template-picker-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: hsl(var(--text-primary));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.template-picker-preview {
+  font-size: 10.5px;
+  color: hsl(var(--text-secondary));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.template-picker-chevron {
+  flex-shrink: 0;
+  color: hsl(var(--text-secondary) / 0.4);
+}
+
+.schedule-media-remove {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  padding: 2px;
+  color: hsl(var(--text-secondary));
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.schedule-media-remove:hover {
+  color: hsl(0 70% 50%);
+  background: hsl(0 70% 96%);
+}
+
+/* ── Anexar arquivo/foto/áudio novo (réplica de AttachmentMenu.tsx —
+   compacto, sem popup, dois botões + microfone) ── */
+.schedule-attach-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.schedule-attach-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 1px dashed hsl(var(--border));
+  color: hsl(var(--text-secondary));
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.schedule-attach-btn:hover:not(:disabled) {
+  color: hsl(var(--color-primary));
+  border-color: hsl(var(--color-primary) / 0.4);
+}
+
+.schedule-attach-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.schedule-recorder-hint {
+  font-size: 10.5px;
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* ── StandaloneRecorderPage.tsx (aba avulsa pra gravar áudio — getUserMedia
+   não funciona de dentro do iframe da sidebar, ver comentário no
+   ScheduleMessagePanel.tsx) ── */
+.standalone-recorder-page {
+  max-width: 380px;
+  margin: 60px auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.standalone-recorder-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: hsl(var(--text-primary));
+  margin: 0;
+  text-align: center;
+}
+
+.standalone-recorder-done {
+  max-width: 380px;
+  margin: 80px auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+
+/* ── Gravador de áudio (AudioRecorderPanel.tsx — réplica simplificada de
+   AudioRecorder.tsx: sem pausar/retomar, sem waveform ao vivo) ── */
+.audio-recorder {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.audio-recorder-error {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.audio-recorder-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  background: hsl(var(--surface-hover));
+  border: 1px solid hsl(var(--border));
+  border-radius: 999px;
+  padding: 6px 10px;
+}
+
+.audio-recorder-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: hsl(0 75% 55%);
+  flex-shrink: 0;
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.audio-recorder-time {
+  flex: 1;
+  font-size: 11px;
+  font-weight: 600;
+  color: hsl(var(--text-secondary));
+  font-variant-numeric: tabular-nums;
+}
+
+.audio-recorder-stop,
+.audio-recorder-play,
+.audio-recorder-use,
+.audio-recorder-discard {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.audio-recorder-stop {
+  width: 22px;
+  height: 22px;
+  background: hsl(0 75% 55%);
+  color: #fff;
+}
+
+.audio-recorder-play {
+  width: 20px;
+  height: 20px;
+  background: hsl(var(--color-primary) / 0.15);
+  color: hsl(var(--color-primary-dark));
+}
+
+.audio-recorder-use {
+  width: 24px;
+  height: 24px;
+  background: hsl(var(--color-primary));
+  color: #fff;
+}
+
+.audio-recorder-discard {
+  width: 22px;
+  height: 22px;
+  background: none;
+  color: hsl(var(--text-secondary));
+}
+
+.audio-recorder-discard:hover {
+  color: hsl(0 70% 50%);
+}
+
+.schedule-when-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
-  font-size: 12.5px;
+  margin-bottom: 6px;
+}
+
+.schedule-when-header .form-label-standalone {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: hsl(var(--text-secondary));
+}
+
+.schedule-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.schedule-preset-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--text-secondary));
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.schedule-preset-pill:hover:not(:disabled) {
+  background: hsl(var(--surface-hover));
+}
+
+.schedule-preset-pill.is-active {
+  border-color: hsl(var(--color-primary));
+  background: hsl(var(--color-primary) / 0.1);
+  color: hsl(var(--color-primary-dark));
+}
+
+/* Um calendário só, largura cheia — sem coluna de horários lado a lado
+   (não cabia bem nos ~300px úteis da sidebar; o horário é o
+   <input type="time"> nativo no rodapé, ver .schedule-calendar-footer). */
+.schedule-calendar-card {
+  border: 1px solid hsl(var(--border));
+  border-radius: 10px;
+  padding: 12px;
+  background: hsl(var(--surface-hover) / 0.4);
+  margin-top: 8px;
+}
+
+.schedule-calendar-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.schedule-calendar-nav span {
+  font-size: 12px;
   font-weight: 700;
   color: hsl(var(--text-primary));
-  margin-bottom: 4px;
 }
 
-.message-library-content {
-  font-size: 12px;
-  font-weight: 400;
+.schedule-calendar-nav button {
+  background: none;
+  border: none;
+  padding: 4px;
   color: hsl(var(--text-secondary));
-  margin: 0 0 8px;
-  white-space: pre-wrap;
-  line-height: 1.4;
+  cursor: pointer;
+  border-radius: 6px;
 }
 
-.message-library-item button {
+.schedule-calendar-nav button:hover {
+  background: hsl(var(--card));
+}
+
+.schedule-calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  margin-bottom: 3px;
+}
+
+.schedule-calendar-weekdays span {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: hsl(var(--text-secondary) / 0.6);
+}
+
+.schedule-calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.schedule-calendar-day {
   width: 100%;
+  min-width: 0;
+  aspect-ratio: 1;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 500;
+  color: hsl(var(--text-primary));
+  cursor: pointer;
+}
+
+.schedule-calendar-day:hover:not(:disabled) {
+  background: hsl(var(--card));
+}
+
+.schedule-calendar-day:disabled {
+  color: hsl(var(--text-secondary) / 0.3);
+  cursor: not-allowed;
+}
+
+.schedule-calendar-day.is-today {
+  background: hsl(var(--color-primary) / 0.1);
+  color: hsl(var(--color-primary-dark));
+  font-weight: 700;
+}
+
+.schedule-calendar-day.is-selected {
+  background: hsl(var(--color-primary));
+  color: #fff;
+  font-weight: 700;
+}
+
+.schedule-calendar-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid hsl(var(--border) / 0.6);
+  font-size: 10.5px;
+  color: hsl(var(--text-secondary));
+}
+
+.schedule-calendar-footer input {
+  width: auto;
+  padding: 4px 7px;
+  font-size: 11px;
+}
+
+.schedule-calendar-footer .link-button {
+  margin-left: auto;
+}
+
+.schedule-relative-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 6px 9px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  background: hsl(var(--color-primary) / 0.06);
+  color: hsl(var(--color-primary-dark));
+  border: 1px solid hsl(var(--color-primary) / 0.15);
+}
+
+.schedule-relative-chip.is-late {
+  background: hsl(0 70% 97%);
+  color: hsl(0 70% 45%);
+  border-color: hsl(0 70% 85%);
+}
+
+.schedule-pause-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: hsl(var(--text-secondary));
+  cursor: pointer;
+}
+
+.schedule-toggle {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  width: 28px;
+  height: 16px;
+  border-radius: 999px;
+  border: none;
+  background: hsl(var(--border));
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  padding: 0;
+}
+
+.schedule-toggle.is-on {
+  background: hsl(var(--color-primary));
+}
+
+.schedule-toggle-dot {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #fff;
+  transition: transform 0.15s ease;
+}
+
+.schedule-toggle.is-on .schedule-toggle-dot {
+  transform: translateX(12px);
+}
+
+.schedule-success {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: hsl(var(--color-primary-dark));
+  margin: 0;
+}
+
+.schedule-block-reason {
+  font-size: 10.5px;
+  color: hsl(var(--text-secondary));
+  margin: 0;
+  text-align: center;
+}
+
+.schedule-submit-btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: hsl(var(--color-primary));
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.schedule-submit-btn:hover:not(:disabled) {
+  background: hsl(var(--color-primary-dark));
+}
+
+.schedule-submit-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* ── Campos personalizados ── */
@@ -789,6 +2071,46 @@ button.danger:hover:not(:disabled) {
 
 .qualification-star.is-active {
   color: #f5a623;
+}
+
+/* ── Seletor de modo da seção Empresa (Nenhuma/Vincular/Criar) — 3
+   botões compactos com ícone lado a lado, em vez de 3 botões cheios
+   empilhados (menos poluição visual). ── */
+.company-mode-row {
+  display: flex;
+  gap: 6px;
+}
+
+.company-mode-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 2px;
+  border-radius: 8px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  color: hsl(var(--text-secondary));
+  font-size: 11px;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.company-mode-btn:hover:not(:disabled) {
+  background: hsl(var(--surface-hover));
+  transform: none;
+  box-shadow: none;
+}
+
+.company-mode-btn.is-active {
+  border-color: hsl(var(--color-primary));
+  background: hsl(var(--color-primary) / 0.08);
+  color: hsl(var(--color-primary-dark));
+}
+
+.company-mode-btn svg {
+  flex-shrink: 0;
 }
 
 /* ── Seção com sub-toggle (ex: Empresa) ── */
@@ -998,6 +2320,473 @@ button.danger:hover:not(:disabled) {
   color: hsl(var(--color-primary));
 }
 
+/* ── OpportunityDetail (bloco "Oportunidade" com vínculo) ── */
+.opportunity-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.opp-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.opp-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  color: hsl(var(--text-primary));
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.opp-external-link {
+  flex-shrink: 0;
+  color: hsl(var(--text-secondary));
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 4px;
+}
+
+.opp-external-link:hover {
+  color: hsl(var(--color-primary));
+  background: hsl(var(--surface-hover));
+}
+
+.opp-company {
+  margin: -6px 0 0;
+  font-size: 11px;
+  color: hsl(var(--text-secondary));
+}
+
+/* ── Status | Etapa (dropdowns lado a lado) ── */
+.status-stage-row {
+  display: flex;
+  gap: 8px;
+}
+
+.status-stage-select-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.status-stage-select {
+  width: 100%;
+  appearance: none;
+  padding: 6px 22px 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--surface-hover));
+  color: hsl(var(--text-primary));
+  text-align: center;
+  text-overflow: ellipsis;
+}
+
+.status-stage-select-wrap.status-active .status-stage-select {
+  background: hsl(var(--color-primary) / 0.12);
+  color: hsl(var(--color-primary-dark));
+  border-color: transparent;
+}
+
+.status-stage-select-wrap.status-won .status-stage-select {
+  background: hsl(var(--status-won) / 0.14);
+  color: hsl(var(--status-won));
+  border-color: transparent;
+}
+
+.status-stage-select-wrap.status-lost .status-stage-select {
+  background: hsl(var(--color-accent) / 0.12);
+  color: hsl(var(--color-accent));
+  border-color: transparent;
+}
+
+.status-stage-select-wrap.status-paused .status-stage-select {
+  background: hsl(var(--status-warning) / 0.14);
+  color: hsl(var(--status-warning));
+  border-color: transparent;
+}
+
+.status-stage-chevron {
+  position: absolute;
+  right: 7px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* ── Linhas de campo da oportunidade (label fixo + valor) ── */
+.opp-field-list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid hsl(var(--border) / 0.6);
+  padding-top: 4px;
+}
+
+.opp-field-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px solid hsl(var(--border) / 0.4);
+}
+
+.opp-field-row:last-child {
+  border-bottom: none;
+}
+
+.opp-field-label {
+  flex-shrink: 0;
+  width: 108px;
+  font-size: 11.5px;
+  color: hsl(var(--text-secondary));
+}
+
+.opp-field-value {
+  flex: 1;
+  min-width: 0;
+}
+
+.opp-field-static {
+  font-size: 12.5px;
+  color: hsl(var(--text-primary));
+}
+
+.opp-field-static.is-empty {
+  color: hsl(var(--text-secondary) / 0.5);
+}
+
+.opp-field-stars {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.opp-field-star-label {
+  font-size: 10.5px;
+  color: hsl(var(--text-secondary));
+}
+
+.opp-field-input,
+.opp-field-select {
+  width: 100%;
+  padding: 5px 8px;
+  font-size: 12px;
+  font-weight: 400;
+  border-radius: 6px;
+}
+
+.opp-field-checkbox {
+  width: auto;
+}
+
+/* ── Datas (Criado em / Ganho em / Perdido em) ── */
+.opp-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border-top: 1px solid hsl(var(--border) / 0.6);
+  padding-top: 8px;
+}
+
+.opp-date-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+}
+
+.opp-add-contact-btn {
+  width: 100%;
+}
+
+.opp-notes-block {
+  border-top: 1px solid hsl(var(--border) / 0.6);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.opp-notes-block .block-title {
+  display: block;
+}
+
+/* ── Aba Atividades ── */
+.activities-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.activities-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 28px 0;
+}
+
+.activities-empty-icon {
+  color: hsl(var(--color-primary) / 0.35);
+}
+
+.new-activity-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  padding: 7px;
+  font-size: 11.5px;
+  font-weight: 500;
+  background: none;
+  box-shadow: none;
+  color: hsl(var(--text-secondary));
+  border: 1.5px dashed hsl(var(--border));
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.new-activity-btn:hover:not(:disabled) {
+  background: hsl(var(--color-primary) / 0.06);
+  border-color: hsl(var(--color-primary) / 0.5);
+  color: hsl(var(--color-primary-dark));
+  transform: none;
+}
+
+.activities-new-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ── Modal "Nova Atividade" (NewActivityModal.tsx) ── */
+.activity-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 10px;
+  z-index: 100;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.activity-modal {
+  background: hsl(var(--card));
+  border-radius: 12px;
+  width: 100%;
+  max-width: 340px;
+  max-height: calc(100vh - 20px);
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+}
+
+.activity-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid hsl(var(--border));
+  position: sticky;
+  top: 0;
+  background: hsl(var(--card));
+}
+
+.activity-modal-header h3 {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0;
+  color: hsl(var(--text-primary));
+}
+
+.activity-modal-close {
+  background: none;
+  border: none;
+  padding: 3px;
+  border-radius: 6px;
+  color: hsl(var(--text-secondary));
+}
+
+.activity-modal-close:hover {
+  background: hsl(var(--surface-hover));
+  color: hsl(var(--text-primary));
+}
+
+.activity-modal-type-picker {
+  padding: 14px 14px 0;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.activity-modal-body {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.activity-modal-body label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.activity-type-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.activity-type-btn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border-radius: 8px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  color: hsl(var(--text-secondary));
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.activity-type-btn:hover:not(:disabled) {
+  background: hsl(var(--surface-hover));
+}
+
+.activity-type-btn.is-active {
+  border-color: hsl(var(--color-primary));
+  background: hsl(var(--color-primary) / 0.08);
+  color: hsl(var(--color-primary-dark));
+}
+
+.activity-type-btn.is-disabled,
+.activity-type-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.activity-type-badge {
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 7.5px;
+  font-weight: 700;
+  padding: 1.5px 4px;
+  border-radius: 999px;
+  border: 1px solid #fde68a;
+  white-space: nowrap;
+  line-height: 1.3;
+}
+
+.activity-context-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.activity-context-value {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: hsl(var(--text-primary));
+  background: hsl(var(--surface-hover));
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  padding: 7px 9px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity-when-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.activity-when-header .form-label-standalone {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+}
+
+.activity-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.activity-preset-pill {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--text-secondary));
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.activity-preset-pill:hover:not(:disabled) {
+  background: hsl(var(--surface-hover));
+}
+
+.activity-preset-pill.is-active {
+  border-color: hsl(var(--color-primary));
+  background: hsl(var(--color-primary) / 0.1);
+  color: hsl(var(--color-primary-dark));
+}
+
+.activity-custom-date {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.activity-relative-label {
+  margin: 8px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: hsl(var(--color-primary-dark));
+}
+
+.activity-relative-label.is-late {
+  color: hsl(var(--color-accent));
+}
+
+.activity-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px solid hsl(var(--border));
+}
+
+.activity-modal-actions button {
+  flex: 0 0 auto;
+}
+
 /* ── Anotações ── */
 .notes-panel {
   display: flex;
@@ -1019,6 +2808,7 @@ button.danger:hover:not(:disabled) {
 .note-item {
   background: hsl(var(--card));
   border: 1px solid hsl(var(--border));
+  border-left: 3px solid hsl(var(--color-accent) / 0.35);
   border-radius: 8px;
   padding: 8px 10px;
 }
