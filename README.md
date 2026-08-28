@@ -183,6 +183,69 @@ validação ao vivo depois de escritos.
   - **"Modelos de mensagens"** (`MessageLibraryPanel.tsx`, já existia) não tem equivalente nas duas
         abas reais — não virou uma terceira aba falsa; movido pra um link discreto no cabeçalho do
         painel, fora da estrutura Contexto/Atividades.
+  - **"Agendar mensagem"** (`ScheduleMessagePanel.tsx`, novo — segundo link no mesmo cabeçalho,
+        ao lado de "Modelos de mensagens") — espelha o agendamento de WhatsApp da aba Conversa real
+        (`ScheduleDropdown.tsx` + `handleScheduleTextFromInput` em `inbox/page.tsx`): grava uma
+        atividade `type: "whatsapp"` em `activities` via `POST /api/v1/tasks` (endpoint já existente,
+        nenhuma mudança pra aceitar o shape). Quem envia de fato é o `scheduler.worker`/
+        `wa-send.worker` do `voe-backend` — servidor, funciona com o navegador/extensão fechados.
+        Só texto livre nesta rodada (sem mídia, sem template Cloud API — fica pra fase futura).
+        Precisou de um endpoint novo em `app.voeops.com`, `GET /api/v1/channels` (lista
+        `whatsapp_channels` do workspace — a extensão não tinha nenhuma noção de canal até agora;
+        auto-seleciona se só existir 1, mostra seletor se houver mais). Também gated pela mesma
+        feature de plano do dashboard (`scheduled_whatsapp_sending`, checada server-side em
+        `checkFeatureAccessServer.ts`) — evita que a extensão libere pra um workspace Starter algo
+        que o dashboard bloqueia.
+  - **Agendar direto de um "Modelo de mensagem"** (fase 2, `MessageLibraryPanel.tsx`) — segundo
+        botão "Agendar" ao lado de "Copiar" em cada item de texto (`content_type === 'text'`; itens
+        de mídia/carrossel da biblioteca real não têm suporte de agendamento nesta rodada). Abre o
+        mesmo `ScheduleMessagePanel` no lugar da lista, com o conteúdo do modelo pré-preenchido e um
+        "Voltar" pra retornar. Só aparece com um contato já resolvido (agendar exige `contact_id`).
+  - **Agendar mídia da biblioteca** (fase 3 — áudio/imagem/vídeo/documento, `content_type !==
+        'text'` com `file_url`). `ScheduleMessagePanel.tsx` agora tem dois modos: texto livre
+        (editável) ou mídia (pré-visualização não-editável — badge de tipo + nome do arquivo — com
+        legenda opcional). Caminho durável do Storage extraído da URL assinada da biblioteca
+        (`extractStoragePathFromUrl`, portado igual ao real de `mediaTypes.ts` em `app.voeops.com`
+        — função pura, sem dependência), pra permitir ao `wa-send.worker` gerar uma signed URL fresca
+        no momento do envio em vez de reusar a original (que pode ter expirado até lá). Bloqueado em
+        canal API Oficial (Cloud API) igual ao real — agendamento de mídia só funciona em canal API
+        Voe. Continua sem carrossel interativo e sem template Cloud API.
+  - **Gerenciar mensagem já agendada** (fase 4, `ActivitiesPanel.tsx`) — "Enviar agora" e
+        "Cancelar" por atividade, só pra `type === 'whatsapp' && status === 'agendada'`. Mesma
+        semântica exata de `useNewActivities.ts` no dashboard: cancelar só muda `status` pra
+        "cancelada" (não deleta); "enviar agora" adianta `scheduled_at` pra agora mantendo status
+        "agendada" — o `scheduler.worker` pega na próxima passada (≤30s) pelo fluxo de envio normal,
+        não é um caminho separado. Via `PUT /api/v1/tasks/[id]` (endpoint já existente). Escopo
+        deliberadamente restrito a isso — reagendar (mudar data/hora) e reabrir uma cancelada ficam
+        de fora; o resto do CRUD de atividades (concluir tarefa etc.) não fazia parte do pedido de
+        agendamento de mensagens.
+
+Com isso, as 4 fases do plano de agendamento de mensagens na extensão (espelhando o agendamento da
+aba Conversa real) estão implementadas — texto livre, biblioteca de mensagens (texto e mídia) e
+gestão básica do que já foi agendado.
+
+**Correção achada na rodada de testes pré-deploy** (sem UI ao vivo pra validar visualmente, testado
+por outras vias — ver abaixo): `ScheduleMessagePanel.tsx` não mandava `opportunity_id` ao criar a
+atividade `whatsapp` (só `contact_id`, igual ao real `handleScheduleTextFromInput` do dashboard).
+Só que a aba Atividades da extensão (`useActivities.ts`) — diferente do painel do Inbox real, que é
+por `contact_id` — lista por `opportunity_id`. Resultado: toda mensagem agendada pelas fases 1/2/3
+ficava invisível na aba Atividades, deixando os botões "Cancelar"/"Enviar agora" da fase 4 sem nada
+pra agir. Corrigido passando `opportunity_id` (quando o lead já tem oportunidade vinculada) desde
+`LeadPanel.tsx` → `MessageLibraryPanel`/`ScheduleMessagePanel` → `POST /api/v1/tasks`. Sem
+oportunidade vinculada, a mensagem ainda agenda e envia normalmente (`contact_id` já basta pro
+`wa-send.worker`), só não aparece nessa lista — mesma limitação que o real teria se não tivesse o
+painel do Inbox separado.
+
+**Testes rodados antes do deploy** (sem WhatsApp Web ao vivo disponível neste ambiente):
+`tsc --noEmit` + `vite build` limpos nos 4 rounds; `next build` completo do `app.voeops.com` limpo;
+suíte `vitest` completa (72/72, incluindo testes novos escritos pra `/api/v1/channels` e o gate de
+`/api/v1/tasks`, seguindo o padrão `route.test.ts` já usado no projeto); `eslint` limpo nos arquivos
+tocados; schema real (`whatsapp_channels`, `workspaces`, `workspace_addons`, `activities`,
+`message_library` — colunas, CHECK constraints, enum `whatsapp_provider`) conferido direto contra o
+Supabase de produção via MCP, incluindo o gate de plano rodado à mão contra 3 workspaces reais
+(Starter nega, Scale libera) e a extração de storage path (`extractStoragePathFromUrl`) testada
+contra URLs assinadas/públicas reais da `message_library`. Não substitui um teste real no WhatsApp
+Web — é o que deu pra verificar sem um.
   - **Removido por não ter equivalente no painel real** (nenhum campo desses chegou a ir pra
         produção — eram só do formulário de criação/campo antigo, nunca do painel de contexto):
         nada precisou ser removido nesta rodada além do próprio `ActionMenu.tsx`/`OpportunityCard.tsx`

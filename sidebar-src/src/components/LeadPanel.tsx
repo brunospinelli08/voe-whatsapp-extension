@@ -15,8 +15,9 @@ import { OpportunityDetail } from './OpportunityDetail'
 import { ContactTagsEditor } from './ContactTagsEditor'
 import { ActivitiesPanel } from './ActivitiesPanel'
 import { MessageLibraryPanel } from './MessageLibraryPanel'
+import { ScheduleMessagePanel } from './ScheduleMessagePanel'
 import { Spinner } from './Spinner'
-import { AlertIcon, BriefcaseIcon, Building2Icon, ChevronLeftIcon, LinkIcon, PlusIcon, PhoneIcon, MailIcon, UserIcon } from './Icons'
+import { AlertIcon, BriefcaseIcon, Building2Icon, ChevronLeftIcon, ClockIcon, LinkIcon, PlusIcon, PhoneIcon, MailIcon, UserIcon } from './Icons'
 
 interface Props {
   chat: ActiveChat
@@ -36,6 +37,7 @@ export function LeadPanel({ chat, workspaceId, onContactContextChange }: Props) 
   const [action, setAction] = useState<LeadAction>(null)
   const [tab, setTab] = useState<PanelTab>('contexto')
   const [showMessages, setShowMessages] = useState(false)
+  const [showSchedule, setShowSchedule] = useState(false)
 
   useEffect(() => {
     onContactContextChange?.(contact ? { contact, refetch } : null)
@@ -55,16 +57,37 @@ export function LeadPanel({ chat, workspaceId, onContactContextChange }: Props) 
       <header className="active-chat-header">
         <div className="active-chat-header-top">
           <strong>{chat.name || chat.phone}</strong>
-          <button className="link-button messages-toggle" onClick={() => setShowMessages(v => !v)}>
-            Modelos de mensagens
-          </button>
+          <div className="header-actions">
+            <button
+              className="link-button messages-toggle"
+              onClick={() => { setShowMessages(v => !v); setShowSchedule(false) }}
+            >
+              Modelos de mensagens
+            </button>
+            <button
+              className="link-button messages-toggle"
+              onClick={() => { setShowSchedule(v => !v); setShowMessages(false) }}
+            >
+              <ClockIcon size={11} /> Agendar mensagem
+            </button>
+          </div>
         </div>
         {chat.name && <span className="chat-phone">{chat.phone}</span>}
       </header>
 
       {showMessages && (
         <div className="messages-panel-inline">
-          <MessageLibraryPanel />
+          <MessageLibraryPanel contactId={contact?.id ?? null} opportunityId={opportunity?.id ?? null} />
+        </div>
+      )}
+
+      {showSchedule && (
+        <div className="messages-panel-inline">
+          {contact ? (
+            <ScheduleMessagePanel contactId={contact.id} opportunityId={opportunity?.id ?? null} />
+          ) : (
+            <p className="muted">Vincule um contato a esse chat para agendar mensagens.</p>
+          )}
         </div>
       )}
 

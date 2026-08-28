@@ -12,6 +12,9 @@ export interface MessageLibraryItem {
   title: string
   content: string
   content_type: string
+  /** URL assinada/pública do Storage — só presente em itens de mídia (áudio/imagem/vídeo/documento). */
+  file_url: string | null
+  file_name: string | null
   category: string | null
   funnel_stage: string | null
   is_favorite: boolean

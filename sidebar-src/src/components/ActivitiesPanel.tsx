@@ -4,11 +4,18 @@
 // app.voeops.com) + "+ Nova atividade", que abre o NewActivityModal.tsx
 // (réplica do ActivityModal.tsx real). Estado vazio (ícone + texto +
 // botão) espelha exatamente o `panelTab === 1` de inbox/page.tsx.
+//
+// "Cancelar"/"Enviar agora" (fase 4 do agendamento de mensagens) — só pra
+// atividades WhatsApp ainda agendadas (`type === 'whatsapp' && status ===
+// 'agendada'`). Escopo deliberadamente restrito a isso: o resto do CRUD de
+// atividades (concluir tarefa, reagendar, reabrir cancelada — tudo que
+// existe em useNewActivities.ts no dashboard) fica de fora, não fazia
+// parte do pedido de agendamento de mensagens.
 
 import { useState } from 'react'
 import { useActivities } from '../hooks/useActivities'
 import { NewActivityModal } from './NewActivityModal'
-import { CalendarClockIcon, PlusIcon } from './Icons'
+import { CalendarClockIcon, ClockIcon, PlusIcon, XIcon } from './Icons'
 import { Spinner } from './Spinner'
 
 interface Props {
@@ -46,8 +53,35 @@ function formatWhen(dueDate: string | null, dueTime: string | null) {
 }
 
 export function ActivitiesPanel({ opportunityId, opportunityName, contactId, contactName }: Props) {
-  const { activities, loading, error, refetch } = useActivities(opportunityId)
+  const { activities, loading, error, refetch, cancelActivity, sendNowActivity } = useActivities(opportunityId)
   const [showModal, setShowModal] = useState(false)
+  const [actingId, setActingId] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+
+  async function handleCancel(id: string) {
+    if (!window.confirm('Cancelar essa mensagem agendada? Ela não será enviada.')) return
+    setActingId(id)
+    setActionError(null)
+    try {
+      await cancelActivity(id)
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Erro ao cancelar')
+    } finally {
+      setActingId(null)
+    }
+  }
+
+  async function handleSendNow(id: string) {
+    setActingId(id)
+    setActionError(null)
+    try {
+      await sendNowActivity(id)
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Erro ao enviar agora')
+    } finally {
+      setActingId(null)
+    }
+  }
 
   if (loading) return <Spinner label="Carregando atividades…" />
 
@@ -81,9 +115,34 @@ export function ActivitiesPanel({ opportunityId, opportunityName, contactId, con
               {formatWhen(activity.due_date, activity.due_time) && (
                 <p className="muted">{formatWhen(activity.due_date, activity.due_time)}</p>
               )}
+              {activity.type === 'whatsapp' && activity.status === 'agendada' && (
+                <div className="activity-item-actions">
+                  <button
+                    className="link-button"
+                    disabled={actingId === activity.id}
+                    onClick={() => handleSendNow(activity.id)}
+                  >
+                    <ClockIcon size={10} /> Enviar agora
+                  </button>
+                  <button
+                    className="link-button activity-cancel-btn"
+                    disabled={actingId === activity.id}
+                    onClick={() => handleCancel(activity.id)}
+                  >
+                    <XIcon size={10} /> Cancelar
+                  </button>
+                </div>
+              )}
             </li>
           ))}
         </ul>
+      )}
+
+      {actionError && (
+        <div className="error-banner">
+          <span>⚠</span>
+          <span>{actionError}</span>
+        </div>
       )}
 
       <button className="new-activity-btn" onClick={() => setShowModal(true)}>

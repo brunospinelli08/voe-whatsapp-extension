@@ -671,7 +671,17 @@ button.danger:hover:not(:disabled) {
   white-space: nowrap;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
 .messages-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   font-size: 10.5px;
   flex-shrink: 0;
 }
@@ -1110,6 +1120,13 @@ button.danger:hover:not(:disabled) {
   gap: 6px;
 }
 
+.create-opportunity-form-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
 /* ── Escolha entre ações (ex: Nova oportunidade / Novo contato) — a
    primeira opção (ação principal) sempre em cima, com destaque; a
    secundária embaixo, discreta. ── */
@@ -1174,6 +1191,36 @@ button.danger:hover:not(:disabled) {
   margin: 4px 0 2px;
 }
 
+.activity-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid hsl(var(--border));
+}
+
+.activity-item-actions .link-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.activity-item-actions .link-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.activity-cancel-btn {
+  color: hsl(0 70% 55%);
+}
+
+.activity-cancel-btn:hover:not(:disabled) {
+  color: hsl(0 70% 45%);
+}
+
 /* ── Modelos de mensagens ── */
 .message-library-list {
   list-style: none;
@@ -1213,6 +1260,86 @@ button.danger:hover:not(:disabled) {
 
 .message-library-item button {
   width: 100%;
+}
+
+.message-library-item-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.message-library-item-actions button {
+  width: auto;
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+/* ── Agendar mensagem (reaproveita as classes activity-* do modal de
+   Nova Atividade — mesmo picker de data/presets, sem o wrapper de modal) ── */
+.schedule-message-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.schedule-message-panel label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.schedule-message-panel button[type='submit'] {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.schedule-pause-toggle {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 6px !important;
+  font-weight: 500 !important;
+  font-size: 11.5px;
+  color: hsl(var(--text-secondary));
+}
+
+.schedule-pause-toggle input[type='checkbox'] {
+  width: auto;
+}
+
+.schedule-success {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: hsl(var(--color-primary-dark));
+  margin: 0;
+}
+
+.schedule-media-preview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: hsl(var(--surface-hover));
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.schedule-media-badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  background: hsl(var(--color-primary) / 0.1);
+  color: hsl(var(--color-primary-dark));
+  border-radius: 999px;
+  padding: 2px 7px;
+  white-space: nowrap;
 }
 
 /* ── Campos personalizados ── */
@@ -1302,6 +1429,46 @@ button.danger:hover:not(:disabled) {
 
 .qualification-star.is-active {
   color: #f5a623;
+}
+
+/* ── Seletor de modo da seção Empresa (Nenhuma/Vincular/Criar) — 3
+   botões compactos com ícone lado a lado, em vez de 3 botões cheios
+   empilhados (menos poluição visual). ── */
+.company-mode-row {
+  display: flex;
+  gap: 6px;
+}
+
+.company-mode-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 2px;
+  border-radius: 8px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  color: hsl(var(--text-secondary));
+  font-size: 11px;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.company-mode-btn:hover:not(:disabled) {
+  background: hsl(var(--surface-hover));
+  transform: none;
+  box-shadow: none;
+}
+
+.company-mode-btn.is-active {
+  border-color: hsl(var(--color-primary));
+  background: hsl(var(--color-primary) / 0.08);
+  color: hsl(var(--color-primary-dark));
+}
+
+.company-mode-btn svg {
+  flex-shrink: 0;
 }
 
 /* ── Seção com sub-toggle (ex: Empresa) ── */
