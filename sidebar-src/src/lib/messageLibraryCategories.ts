@@ -6,7 +6,7 @@
 // qualquer uma dessas garante que o valor bate com o que o dashboard já
 // entende, mesmo sem a extensão buscar a taxonomia customizada do workspace
 // (message_library_labels — fora de escopo, mesma decisão já tomada pro
-// filtro de categorias em MessageLibraryPanel/TemplatePickerInline).
+// filtro de categorias em TemplatePickerInline.tsx).
 
 export const DEFAULT_CATEGORIES: { slug: string; name: string }[] = [
   { slug: 'abertura', name: 'Abertura' },

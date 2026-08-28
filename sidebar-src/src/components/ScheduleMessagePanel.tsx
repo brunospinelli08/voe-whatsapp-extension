@@ -111,9 +111,16 @@ interface Props {
    * só ficaria invisível/impossível de cancelar por aqui).
    */
   opportunityId?: string | null
+  /**
+   * Chamado depois de agendar com sucesso — usado por NewActivityModal.tsx
+   * (o container fecha e recarrega a lista, igual aos outros tipos de
+   * atividade). Sem isso (uso avulso), o painel só mostra "agendado com
+   * sucesso" inline e continua aberto pra agendar outra.
+   */
+  onScheduled?: () => void
 }
 
-export function ScheduleMessagePanel({ contactId, libraryItem, opportunityId }: Props) {
+export function ScheduleMessagePanel({ contactId, libraryItem, opportunityId, onScheduled }: Props) {
   const { channels, loading: loadingChannels, error: channelsError } = useChannels()
   // Estado, não deriva direto da prop: além do modelo que pode chegar pronto
   // de fora (fluxo antigo — Modelos de mensagens → Agendar), agora também dá
@@ -334,6 +341,7 @@ export function ScheduleMessagePanel({ contactId, libraryItem, opportunityId }: 
       setSelectedLibraryItem(null)
       setDueDate('')
       setDueTime('')
+      onScheduled?.()
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
         setError('Agendamento de WhatsApp não disponível no seu plano atual.')

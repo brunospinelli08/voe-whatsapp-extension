@@ -1,20 +1,23 @@
 // TemplatePickerInline.tsx
-// Seletor compacto de "Modelos de mensagens", pra usar DENTRO do fluxo de
-// agendamento (ScheduleMessagePanel.tsx) — resolve uma lacuna real: antes só
-// dava pra chegar no agendamento PARTINDO da biblioteca (Modelos de
-// mensagens → Agendar), nunca o contrário (já estou agendando, quero
-// escolher um modelo agora). Um clique no item já seleciona — sem duplicar
-// as ações "Copiar"/"Agendar" da lista completa (MessageLibraryPanel.tsx),
-// que não fazem sentido aqui dentro (só existe UMA ação possível: usar).
+// Seletor de "Modelos de mensagens", usado DENTRO do fluxo de agendamento
+// (ScheduleMessagePanel.tsx, dentro de Nova Atividade → WhatsApp — não
+// existe mais um menu de "Modelos de mensagens" avulso no cabeçalho do
+// lead; consolidado tudo aqui a pedido explícito). Um clique no item já
+// seleciona — sem "Copiar"/"Agendar" separados, só existe UMA ação
+// possível aqui dentro: usar pra agendar.
 //
-// Reaproveita a mesma busca/tipos schedulable de MessageLibraryPanel —
-// SCHEDULABLE_TYPES exportado daqui, importado lá (fonte única).
+// "+ Novo" abre CreateTemplateScreen.tsx (antes só alcançável pelo
+// MessageLibraryPanel.tsx removido) — criar um modelo sem sair do fluxo.
+//
+// SCHEDULABLE_TYPES/TYPE_ICONS exportados daqui — única fonte, nada mais
+// os reimporta agora que MessageLibraryPanel.tsx foi removido.
 
 import { useMemo, useState } from 'react'
 import { useMessageLibrary, type MessageLibraryItem } from '../hooks/useMessageLibrary'
+import { CreateTemplateScreen } from './CreateTemplateScreen'
 import { Spinner } from './Spinner'
 import {
-  ChevronLeftIcon, ChevronRightIcon, SearchIcon, XIcon,
+  ChevronLeftIcon, ChevronRightIcon, PlusIcon, SearchIcon, XIcon,
   MessageCircleIcon, MicIcon, ImageIcon, VideoIcon, FileTextIcon,
 } from './Icons'
 
@@ -34,8 +37,9 @@ interface Props {
 }
 
 export function TemplatePickerInline({ onSelect, onClose }: Props) {
-  const { messages, loading, error } = useMessageLibrary()
+  const { messages, loading, error, refetch } = useMessageLibrary()
   const [search, setSearch] = useState('')
+  const [showCreate, setShowCreate] = useState(false)
 
   const filtered = useMemo(() => {
     const schedulable = messages.filter(
@@ -46,13 +50,25 @@ export function TemplatePickerInline({ onSelect, onClose }: Props) {
     return schedulable.filter(m => m.title.toLowerCase().includes(q) || (m.content ?? '').toLowerCase().includes(q))
   }, [messages, search])
 
+  if (showCreate) {
+    return (
+      <CreateTemplateScreen
+        onClose={() => setShowCreate(false)}
+        onCreated={() => { setShowCreate(false); refetch() }}
+      />
+    )
+  }
+
   return (
     <div className="template-picker">
       <div className="template-picker-header">
-        <button type="button" className="back-button" onClick={onClose}>
+        <button type="button" className="back-button-danger" onClick={onClose}>
           <ChevronLeftIcon size={13} /> Voltar
         </button>
         <span>Escolher modelo</span>
+        <button type="button" className="message-library-create-btn" onClick={() => setShowCreate(true)} title="Novo modelo">
+          <PlusIcon size={10} /> Novo
+        </button>
       </div>
 
       <div className="message-library-search">

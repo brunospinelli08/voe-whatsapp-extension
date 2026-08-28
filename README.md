@@ -491,6 +491,40 @@ seguida):
     em "Aguardando gravação…" pra sempre se a aba de gravação fosse fechada sem terminar; agora
     continua clicável pra tentar de novo.
 
+**Consolidação: agendamento de mensagem virou "Nova Atividade → WhatsApp"** (pedido explícito do
+chefe do Bruno, repassado numa reunião) — mudança estrutural, não só visual:
+  - **"Modelos de mensagens"/"Agendar mensagem" não existem mais como botões avulsos no cabeçalho
+    do lead.** O único caminho agora é Aba Atividades → "+ Nova atividade" → tipo **WhatsApp**
+    (antes desabilitado com badge "No dashboard" — igual ao real, exigia canal+modelo, subsistema
+    que a extensão não tinha ainda). Decisão consciente: sem manter os dois botões como atalho
+    extra — um caminho só, igual a real VOE organiza (Nova Atividade é o ponto de entrada pra
+    qualquer tipo de atividade, WhatsApp incluso).
+  - `NewActivityModal.tsx`: quando o tipo "WhatsApp" é selecionado, o formulário genérico
+    (Título/Descrição/Responsável/Quando) é **trocado inteiro** por `ScheduleMessagePanel.tsx` —
+    que já tem seu próprio formulário completo (canal, mensagem/mídia/modelo, calendário,
+    pausar-se-responder, submit). Não dá pra aninhar o `<form>` dele dentro do `<form>` genérico
+    (inválido em HTML), então o seletor de tipo saiu de dentro do form — fica sempre visível, e
+    cada ramo (genérico vs. WhatsApp) tem seu próprio `<form>` abaixo dele.
+  - `ScheduleMessagePanel.tsx` ganhou `onScheduled?: () => void` — quando fornecido (uso dentro do
+    modal), fecha o modal e recarrega a lista de atividades, igual aos outros tipos. Sem uso
+    avulso (aquele fornecido só pelo cabeçalho, que não existe mais), o parâmetro simplesmente
+    não é passado.
+  - **`MessageLibraryPanel.tsx` removido** — toda a capacidade dele (buscar, listar, criar via "+
+    Novo") foi absorvida por `TemplatePickerInline.tsx` ("Usar um modelo", de dentro do
+    agendamento). **Perda consciente**: não existe mais um jeito de só "Copiar" um modelo pra
+    colar manualmente no WhatsApp Web sem agendar — só resta agendar. Se isso fizer falta, é fácil
+    trazer de volta um botão "Copiar" dentro do `TemplatePickerInline`.
+  - **Botão de voltar vermelho** (pedido explícito — "algumas páginas ficam sem saída"): achei que
+    o `ScheduleMessagePanel`/`MessageLibraryPanel` (removido) realmente não tinham nenhuma saída
+    própria — só o botão do cabeçalho, que rolava pra fora de vista com o formulário longo. A
+    consolidação acima já resolve isso (agora vivem dentro do modal, que tem cabeçalho fixo/sticky
+    com X sempre visível, `position: sticky` já existia). Pra reforçar visualmente, criei
+    `.back-button-danger` (mesmo `.back-button` cinza que já existia nos formulários de
+    Oportunidade/Contato, só que vermelho) e apliquei em `TemplatePickerInline.tsx`/
+    `CreateTemplateScreen.tsx` — as duas telas que trocam a tela inteira de dentro do fluxo de
+    agendamento. Não mexi no `.back-button` cinza original (usado em Nova Oportunidade/Vincular/
+    Novo contato) — esses já tinham saída, não eram o alvo da reclamação.
+
 ## Ícones
 
 Os ícones em `icons/` usam o símbolo oficial da VOE (mesmo mark já usado na

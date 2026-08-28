@@ -9,23 +9,30 @@
 // - "Ligação" e "E-mail" ficam desabilitados/"Em breve", igual ao real —
 //   nem a própria VOE os tem disponíveis ainda (ACTIVITY_TYPES no código
 //   real já marca os dois `disabled: true`).
-// - "WhatsApp" também fica desabilitado aqui, DIFERENTE do real: lá, criar
-//   uma atividade WhatsApp exige canal + modelo/mensagem (Cloud API ou
-//   Evolution) — todo um subsistema de agendamento de campanha que não
-//   existe nesta extensão. Criar sem isso geraria uma atividade quebrada
-//   (o worker que dispara o envio não teria o que enviar). Em vez de "Em
-//   breve" (que seria impreciso — a VOE TEM WhatsApp agendado, só não
-//   nesta extensão), o bloco mostra uma dica ao passar o mouse.
 // - Fim do evento / dia inteiro (reunião/visita) não foi replicado — due_date
 //   + due_time já bastam pra criar a atividade; esses campos ficam null.
 // - "Personalizar" abre inputs nativos de data/hora simples, não o
 //   calendário completo do real (autorizado explicitamente).
+//
+// "WhatsApp" (pedido explícito, rodada posterior — antes ficava desabilitado
+// com "No dashboard", igual à VOE de verdade só que ela TEM o subsistema e
+// a extensão não tinha): agora usa o MESMO fluxo/estrutura da VOE — criar
+// uma atividade WhatsApp é abrir Nova Atividade → tipo WhatsApp, igual lá.
+// Quando esse tipo é selecionado, o resto do formulário genérico (Título,
+// Descrição, Responsável, Quando) é TROCADO inteiro por
+// ScheduleMessagePanel.tsx — que já tem seu próprio formulário completo
+// (canal, mensagem/mídia/modelo, calendário, pausar-se-responder, submit).
+// Por isso não pode ficar dentro do <form> genérico (form dentro de form é
+// inválido) — o formulário genérico só existe pros outros tipos agora.
+// Consolidação: "Modelos de mensagens"/"Agendar mensagem" não existem mais
+// como botões avulsos no cabeçalho do lead — só chegam aqui.
 
 import { useEffect, useState } from 'react'
 import { voeApi } from '../lib/apiClient'
 import { supabase } from '../lib/supabaseClient'
 import { useWorkspaceUsers } from '../hooks/useWorkspaceUsers'
 import { buildActivityDatePresets, formatRelativeLabel } from '../lib/activityDatePresets'
+import { ScheduleMessagePanel } from './ScheduleMessagePanel'
 import {
   XIcon, CheckSquareIcon, MessageCircleIcon, PhoneCallIcon, MailIcon,
   UsersIcon, MapPinIcon, CalendarIcon,
@@ -35,7 +42,7 @@ type ActivityType = 'task' | 'whatsapp' | 'call' | 'email' | 'meeting' | 'visit'
 
 const TYPES: { key: ActivityType; label: string; icon: typeof CheckSquareIcon; disabled?: boolean; hint?: string }[] = [
   { key: 'task', label: 'Tarefa', icon: CheckSquareIcon },
-  { key: 'whatsapp', label: 'WhatsApp', icon: MessageCircleIcon, disabled: true, hint: 'Exige canal e modelo — crie pelo dashboard da VOE' },
+  { key: 'whatsapp', label: 'WhatsApp', icon: MessageCircleIcon },
   { key: 'call', label: 'Ligação', icon: PhoneCallIcon, disabled: true, hint: 'Em breve' },
   { key: 'email', label: 'E-mail', icon: MailIcon, disabled: true, hint: 'Em breve' },
   { key: 'meeting', label: 'Reunião', icon: UsersIcon },
@@ -120,8 +127,7 @@ export function NewActivityModal({ opportunityId, opportunityName, contactId, co
       return
     }
     // Mesmo bloqueio de data no passado do real, só pra "task" aqui
-    // (whatsapp/email — os outros dois tipos bloqueados — nem chegam a
-    // esse ponto; meeting/visit permitem passado, igual ao real).
+    // (meeting/visit permitem passado, igual ao real).
     if (type === 'task') {
       const selected = new Date(`${dueDate}T${dueTime || '23:59'}:00`)
       if (selected < new Date()) {
@@ -166,141 +172,158 @@ export function NewActivityModal({ opportunityId, opportunityName, contactId, co
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="activity-modal-body">
-          {/* ── Seletor de tipo ── */}
-          <div>
-            <label className="form-label-standalone">Tipo</label>
-            <div className="activity-type-grid">
-              {TYPES.map(({ key, label, icon: Icon, disabled, hint }) => (
-                <button
-                  key={key}
-                  type="button"
-                  disabled={disabled}
-                  title={disabled ? hint : undefined}
-                  onClick={() => !disabled && setType(key)}
-                  className={`activity-type-btn${type === key ? ' is-active' : ''}${disabled ? ' is-disabled' : ''}`}
-                >
-                  <Icon size={16} />
-                  {label}
-                  {disabled && <span className="activity-type-badge">{key === 'whatsapp' ? 'No dashboard' : 'Em breve'}</span>}
-                </button>
-              ))}
-            </div>
+        {/* Seletor de tipo — fora do <form>, os dois ramos abaixo (genérico
+            vs. WhatsApp) têm seu próprio <form> cada um. */}
+        <div className="activity-modal-type-picker">
+          <label className="form-label-standalone">Tipo</label>
+          <div className="activity-type-grid">
+            {TYPES.map(({ key, label, icon: Icon, disabled, hint }) => (
+              <button
+                key={key}
+                type="button"
+                disabled={disabled}
+                title={disabled ? hint : undefined}
+                onClick={() => !disabled && setType(key)}
+                className={`activity-type-btn${type === key ? ' is-active' : ''}${disabled ? ' is-disabled' : ''}`}
+              >
+                <Icon size={16} />
+                {label}
+                {disabled && <span className="activity-type-badge">Em breve</span>}
+              </button>
+            ))}
           </div>
+        </div>
 
-          <label>
-            Título *
-            <input
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              required
-              placeholder={TITLE_PLACEHOLDER[type] ?? 'Título da atividade'}
-              autoFocus
-            />
-          </label>
+        {type === 'whatsapp' ? (
+          contactId ? (
+            <div className="activity-modal-body">
+              <ScheduleMessagePanel
+                contactId={contactId}
+                opportunityId={opportunityId}
+                onScheduled={() => { onCreated(); onClose() }}
+              />
+            </div>
+          ) : (
+            <div className="activity-modal-body">
+              <p className="muted">Vincule um contato a esse chat para agendar mensagens.</p>
+            </div>
+          )
+        ) : (
+          <form onSubmit={handleSubmit} className="activity-modal-body">
+            <label>
+              Título *
+              <input
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                required
+                placeholder={TITLE_PLACEHOLDER[type] ?? 'Título da atividade'}
+                autoFocus
+              />
+            </label>
 
-          <label>
-            Descrição
-            <textarea
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              rows={2}
-              placeholder="Detalhes opcionais..."
-            />
-          </label>
+            <label>
+              Descrição
+              <textarea
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                rows={2}
+                placeholder="Detalhes opcionais..."
+              />
+            </label>
 
-          {/* ── Oportunidade / Contato — já vêm do contexto ativo, sem pedir de novo ── */}
-          <div className="activity-context-row">
+            {/* ── Oportunidade / Contato — já vêm do contexto ativo, sem pedir de novo ── */}
+            <div className="activity-context-row">
+              <div>
+                <span className="form-label-standalone">Oportunidade</span>
+                <p className="activity-context-value">{opportunityName}</p>
+              </div>
+              <div>
+                <span className="form-label-standalone">Contato</span>
+                <p className="activity-context-value">{contactName ?? '—'}</p>
+              </div>
+            </div>
+
+            {/* ── Responsável ── */}
+            <label>
+              Responsável
+              <select
+                value={assignedTo}
+                onChange={e => setAssignedTo(e.target.value)}
+                disabled={users.length === 0}
+              >
+                {users.length === 0
+                  ? <option value="">Carregando…</option>
+                  : users.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+              </select>
+            </label>
+
+            {/* ── Quando ── */}
             <div>
-              <span className="form-label-standalone">Oportunidade</span>
-              <p className="activity-context-value">{opportunityName}</p>
-            </div>
-            <div>
-              <span className="form-label-standalone">Contato</span>
-              <p className="activity-context-value">{contactName ?? '—'}</p>
-            </div>
-          </div>
-
-          {/* ── Responsável ── */}
-          <label>
-            Responsável
-            <select
-              value={assignedTo}
-              onChange={e => setAssignedTo(e.target.value)}
-              disabled={users.length === 0}
-            >
-              {users.length === 0
-                ? <option value="">Carregando…</option>
-                : users.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
-            </select>
-          </label>
-
-          {/* ── Quando ── */}
-          <div>
-            <div className="activity-when-header">
-              <label className="form-label-standalone">
-                <CalendarIcon size={12} /> Quando *
-              </label>
-              {dueDate && !showCustom && (
-                <button type="button" className="link-button" onClick={() => setShowCustom(true)}>
-                  Personalizar
-                </button>
-              )}
-            </div>
-            <div className="activity-presets">
-              {presets.map(preset => {
-                const { date, time } = preset.getDateTime()
-                const isActive = dueDate === date && dueTime === time
-                return (
-                  <button
-                    key={preset.label}
-                    type="button"
-                    className={`activity-preset-pill${isActive ? ' is-active' : ''}`}
-                    onClick={() => applyPreset(preset.getDateTime)}
-                  >
-                    {preset.label}
+              <div className="activity-when-header">
+                <label className="form-label-standalone">
+                  <CalendarIcon size={12} /> Quando *
+                </label>
+                {dueDate && !showCustom && (
+                  <button type="button" className="link-button" onClick={() => setShowCustom(true)}>
+                    Personalizar
                   </button>
-                )
-              })}
-              {!showCustom && (
-                <button type="button" className="activity-preset-pill" onClick={() => setShowCustom(true)}>
-                  Personalizar
-                </button>
+                )}
+              </div>
+              <div className="activity-presets">
+                {presets.map(preset => {
+                  const { date, time } = preset.getDateTime()
+                  const isActive = dueDate === date && dueTime === time
+                  return (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      className={`activity-preset-pill${isActive ? ' is-active' : ''}`}
+                      onClick={() => applyPreset(preset.getDateTime)}
+                    >
+                      {preset.label}
+                    </button>
+                  )
+                })}
+                {!showCustom && (
+                  <button type="button" className="activity-preset-pill" onClick={() => setShowCustom(true)}>
+                    Personalizar
+                  </button>
+                )}
+              </div>
+
+              {showCustom && (
+                <div className="activity-custom-date">
+                  <input type="date" value={dueDate} onChange={e => { setDueDate(e.target.value); setDateError(false); setPastDateError(false) }} />
+                  <input type="time" value={dueTime} onChange={e => { setDueTime(e.target.value); setDateError(false); setPastDateError(false) }} />
+                </div>
               )}
+
+              {dueDate && relativeLabel && (
+                <p className={`activity-relative-label${relativeLabel.includes('atrasada') ? ' is-late' : ''}`}>
+                  {relativeLabel}
+                </p>
+              )}
+              {dateError && !dueDate && <p className="error-text">Selecione uma data para a atividade</p>}
+              {pastDateError && <p className="error-text">Não é possível criar tarefa com data no passado</p>}
             </div>
 
-            {showCustom && (
-              <div className="activity-custom-date">
-                <input type="date" value={dueDate} onChange={e => { setDueDate(e.target.value); setDateError(false); setPastDateError(false) }} />
-                <input type="time" value={dueTime} onChange={e => { setDueTime(e.target.value); setDateError(false); setPastDateError(false) }} />
+            {error && (
+              <div className="error-banner">
+                <span>⚠</span>
+                <span>{error}</span>
               </div>
             )}
 
-            {dueDate && relativeLabel && (
-              <p className={`activity-relative-label${relativeLabel.includes('atrasada') ? ' is-late' : ''}`}>
-                {relativeLabel}
-              </p>
-            )}
-            {dateError && !dueDate && <p className="error-text">Selecione uma data para a atividade</p>}
-            {pastDateError && <p className="error-text">Não é possível criar tarefa com data no passado</p>}
-          </div>
-
-          {error && (
-            <div className="error-banner">
-              <span>⚠</span>
-              <span>{error}</span>
+            <div className="activity-modal-actions">
+              <button type="button" className="secondary" onClick={onClose} disabled={saving}>
+                Cancelar
+              </button>
+              <button type="submit" disabled={!canSubmit}>
+                {saving ? 'Criando…' : 'Criar atividade'}
+              </button>
             </div>
-          )}
-
-          <div className="activity-modal-actions">
-            <button type="button" className="secondary" onClick={onClose} disabled={saving}>
-              Cancelar
-            </button>
-            <button type="submit" disabled={!canSubmit}>
-              {saving ? 'Criando…' : 'Criar atividade'}
-            </button>
-          </div>
-        </form>
+          </form>
+        )}
       </div>
     </div>
   )

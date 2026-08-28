@@ -158,7 +158,7 @@ export function CreateTemplateScreen({ onCreated, onClose }: Props) {
   return (
     <form onSubmit={handleSubmit} className="schedule-panel">
       <div className="template-picker-header">
-        <button type="button" className="back-button" onClick={onClose}>
+        <button type="button" className="back-button-danger" onClick={onClose}>
           <ChevronLeftIcon size={13} /> Voltar
         </button>
         <span>Novo modelo</span>
