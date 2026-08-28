@@ -259,7 +259,7 @@ export function ScheduleMessagePanel({ contactId, libraryItem, opportunityId }: 
     canSubmit || saving || blockedCloudApi ? null :
     uploading ? 'Aguardando o anexo terminar de enviar…' :
     !channelId ? 'Nenhum canal de WhatsApp disponível.' :
-    !dueDate ? 'Escolha uma data e hora de envio.' :
+    !dueDate ? 'Escolha um dia acima (um atalho ou um número do calendário) — só a hora não basta.' :
     !isMedia && text.trim().length === 0 ? 'Escreva uma mensagem ou anexe algo.' :
     null
 
@@ -560,7 +560,19 @@ export function ScheduleMessagePanel({ contactId, libraryItem, opportunityId }: 
 
             <div className="schedule-calendar-footer">
               <span>Horário:</span>
-              <input type="time" value={dueTime} onChange={e => setDueTime(e.target.value)} />
+              <input
+                type="time"
+                value={dueTime}
+                onChange={e => {
+                  setDueTime(e.target.value)
+                  // Espelha handleDayClick (que assume 09:00 se só a data foi
+                  // escolhida): só mexer na hora aqui, sem nunca ter clicado um
+                  // dia, deixava dueDate vazio pra sempre — o botão "Agendar
+                  // envio" travava sem ficar óbvio que faltava especificamente
+                  // clicar um número do calendário (achado testando ao vivo).
+                  if (!dueDate) setDueDate(todayStr)
+                }}
+              />
               <button type="button" className="link-button" onClick={() => setShowCalendar(false)}>Fechar</button>
             </div>
           </div>
