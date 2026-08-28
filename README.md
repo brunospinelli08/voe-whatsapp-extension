@@ -246,6 +246,103 @@ Supabase de produção via MCP, incluindo o gate de plano rodado à mão contra 
 (Starter nega, Scale libera) e a extração de storage path (`extractStoragePathFromUrl`) testada
 contra URLs assinadas/públicas reais da `message_library`. Não substitui um teste real no WhatsApp
 Web — é o que deu pra verificar sem um.
+
+**Redesign visual (pedido explícito, depois de testar ao vivo)** — a primeira versão do agendamento
+e da biblioteca de mensagens estava com poluição visual: ações sempre visíveis, presets sem ícone,
+checkbox cru, `<input type=date>` nativo. Refeito espelhando exatamente `ScheduleDropdown.tsx` +
+`SmartDatePicker.tsx` + `MessageCenterPanel.tsx` do app.voeops.com:
+  - `ScheduleMessagePanel.tsx`: mini-calendário completo de "Personalizar" (navegação de mês, grade
+    de dias, coluna de horários — `whatsappDatePresets.ts`, novo, porta o ramo `type === "whatsapp"`
+    de `buildPresets`/`buildTimeSlots` do real, diferente do conjunto "base" de Nova Atividade),
+    presets com ícone, chip colorido de horário relativo, toggle de verdade (não checkbox) pra
+    "pausar se responder", card único pro conteúdo (mensagem/mídia + canal).
+  - `MessageLibraryPanel.tsx`: header com contagem, busca (client-side), ícones monocromáticos por
+    tipo (áudio/imagem/vídeo/documento — troca dos emojis coloridos anteriores) em vez de badge de
+    emoji, ações reveladas só no hover do card (igual ao `group-hover:opacity-100` real) em vez de
+    dois botões sempre visíveis, badge de categoria.
+  - Escopo consciente: sem os filtros de categoria/tags nem o dropdown de "modelo" (coleção) do real
+    — dependem de taxonomia do workspace (`message_library_labels`/`message_collections`) que a
+    extensão não busca; ficaria fora de um ajuste puramente visual.
+
+**Anexar arquivo/foto/vídeo/documento novo + gravar áudio** (pedido explícito) — até aqui só dava
+pra agendar mídia já salva na biblioteca; agora também dá pra anexar algo novo direto do dispositivo,
+igual ao menu "+" do compositor real (`AttachmentMenu.tsx`, só "Fotos e vídeos"/"Documento" — sem
+outras opções no real). Só aparece no modo texto livre (sem mídia de biblioteca já fixada).
+  - `POST /api/v1/media` (novo, `app.voeops.com`) — gêmeo autenticado por token de
+    `/api/whatsapp/upload-media` (cookie-auth, dashboard): sobe pro bucket `media` do Storage,
+    devolve `storage_path` (não signed URL — o `wa-send.worker` gera uma fresca na hora do envio,
+    mesmo mecanismo já usado pra mídia da biblioteca). Mesmos limites de tamanho por tipo (imagem
+    5MB, vídeo/áudio 16MB, documento 100MB), validados com as mesmas funções puras de
+    `mediaTypes.ts` portadas pro client (`sidebar-src/src/lib/mediaTypes.ts`, checagem antecipada
+    antes de gastar upload com um arquivo que vai ser rejeitado).
+  - **Achado técnico importante durante a implementação**: a ponte `chrome.runtime.sendMessage` que
+    a sidebar usa pra falar com `background.js` (necessária porque o iframe da sidebar não ganha o
+    bypass de CORS do `host_permissions` — só o service worker ganha) só carregava **string** até
+    agora — um `FormData`/`File` seria descartado silenciosamente. Resolvido convertendo o arquivo
+    pra base64 na sidebar (`backgroundUploadFile` em `backgroundFetch.ts`), reconstruindo um `Blob`
+    de verdade no `background.js` (contexto de service worker, com `FormData`/`Blob` completos) antes
+    de montar a request multipart de verdade. Limite prático de 15MB pro upload pela extensão (mais
+    conservador que os 100MB do servidor pra documento) — base64 infla ~33% o tamanho, e arquivo
+    grande demais na mensagem trava a UI durante a codificação; documento grande continua dando pra
+    anexar pelo dashboard normal.
+  - `AudioRecorderPanel.tsx` (novo) — versão simplificada de `AudioRecorder.tsx` (sem
+    pausar/retomar, sem waveform ao vivo — só gravar, ouvir o preview, descartar ou usar), sobe pelo
+    mesmo `/api/v1/media`. Precisou de `iframe.allow = 'microphone'` em `content.js` — sem isso
+    `getUserMedia` é bloqueado por Permissions Policy antes até de perguntar, mesmo sendo um iframe
+    da própria extensão (é cross-origin em relação a `web.whatsapp.com`, que é quem o hospeda).
+  - **Confirmado ao vivo: microfone dentro do iframe da sidebar não funciona** — `getUserMedia`
+    dava `NotAllowedError` mesmo com `allow="microphone"` no iframe. Permissions Policy só delega o
+    "direito de pedir"; o Chrome não concede (nem chega a perguntar) microfone de verdade pra um
+    iframe cross-origin sem contexto de navegação de topo próprio. Corrigido com uma solução
+    diferente da tentativa original: "Gravar áudio" agora abre uma **aba própria da extensão**
+    (`StandaloneRecorderPage.tsx`, roteada por `?mode=recorder` em `main.tsx` — sem login/contexto de
+    lead, só a gravação) — lá, sendo um contexto de topo de verdade, o Chrome pede a permissão
+    normalmente. O áudio gravado volta pra sidebar por `chrome.runtime.sendMessage` (broadcast —
+    `fileBase64/fileName/fileType` em `fileBase64.ts`, mesma técnica do upload). Limitação conhecida:
+    com mais de uma aba do WhatsApp Web aberta simultaneamente, o broadcast pode entregar o áudio pro
+    painel errado (não tem correlação de qual aba pediu) — baixa probabilidade, não resolvido nesta
+    rodada.
+  - O relay base64 → Blob de upload de arquivo (`/api/v1/media`) segue sem teste ao vivo — só o
+    endpoint em si foi testado (schema real + `vitest`); o caminho completo sidebar → background.js →
+    servidor com um arquivo de verdade ainda não foi confirmado na prática.
+
+**Escolher modelo de dentro do agendamento** (pedido explícito) — lacuna real do fluxo: antes só
+dava pra chegar no agendamento PARTINDO da biblioteca ("Modelos de mensagens" → item → "Agendar");
+não tinha o caminho inverso ("já estou na tela de agendar, quero escolher um modelo agora"). Botão
+"Usar um modelo" dentro do `ScheduleMessagePanel.tsx` abre um seletor compacto embutido
+(`TemplatePickerInline.tsx`, novo — busca + lista de uma linha por item, um clique já seleciona, sem
+duplicar os botões "Copiar"/"Agendar" da lista completa, que não fazem sentido aqui: só existe UMA
+ação possível). `libraryItem` deixou de ser só uma prop fixa e virou estado interno
+(`selectedLibraryItem`) — os dois caminhos (vindo de fora via prop, ou escolhido de dentro via
+picker) convergem pro mesmo estado, reaproveitando 100% da lógica de preview/remover/trocar que já
+existia. Modelo de texto pré-preenche e continua editável (like "inserir"); modelo de mídia fixa a
+mídia (como já era) mas agora com "Trocar"/remover pra sair sem precisar recomeçar o formulário do
+zero. `SCHEDULABLE_TYPES`/`TYPE_ICONS` viraram fonte única em `TemplatePickerInline.tsx`, importados
+por `MessageLibraryPanel.tsx` (antes duplicados nos dois arquivos).
+
+**Criar modelo de mensagem novo, de dentro da extensão** (pedido explícito) — até aqui a extensão só
+lia a biblioteca (`GET /api/v1/message-library`); criação era só pelo dashboard
+(`MessageLibrarySettings.tsx`, insert direto via Supabase client-side). Agora dá pra criar sem sair
+da extensão, botão "+ Novo" no cabeçalho de "Modelos de mensagens" → `CreateTemplateScreen.tsx`.
+  - Dois endpoints novos no `app.voeops.com`: `POST /api/v1/message-library/media` (upload pro bucket
+    **`message-library`** — diferente do bucket `media` usado no anexo de agendamento; devolve
+    `file_url` já assinada por 1h, igual ao real — mesma limitação de expiração que o dashboard já
+    tem, sem refresh automático) e `POST /api/v1/message-library` (cria a linha, espelha `createItem()`
+    de `useMessageLibrary.ts`).
+  - Extensão reaproveita 100% da infraestrutura de anexo/gravação já construída pro agendamento —
+    `voeApi.upload`, o relay base64 do `backgroundUploadFile`, e a aba avulsa de gravação
+    (`StandaloneRecorderPage.tsx` + broadcast `VOE_AUDIO_HANDOFF`) — só troca o endpoint de destino.
+    Zero código novo pra upload/gravação em si.
+  - Categoria usa as 11 categorias padrão do real (`DEFAULT_CATEGORIES`, portado em
+    `messageLibraryCategories.ts`) — `category` é texto livre no banco (sem CHECK constraint), então
+    qualquer uma bate certinho com o que o dashboard já entende.
+  - **Escopo consciente, pra manter a tela enxuta** (pedido explícito de cuidado com poluição
+    visual): sem carrossel, sem tags, sem transcrição automática de áudio (`/api/transcribe` no
+    dashboard) — grava/anexa o áudio, mas o campo de legenda fica em branco até o usuário escrever
+    algo. Tela é só: seletor de tipo (5 ícones), título, categoria, conteúdo (contextual ao tipo),
+    favorito, botão criar — nada além disso.
+  - Testado: `tsc --noEmit` + `vite build` limpos na extensão; os dois endpoints novos com
+    `next build`/`eslint`/`vitest` limpos no `app.voeops.com` (16 testes novos).
   - **Removido por não ter equivalente no painel real** (nenhum campo desses chegou a ir pra
         produção — eram só do formulário de criação/campo antigo, nunca do painel de contexto):
         nada precisou ser removido nesta rodada além do próprio `ActionMenu.tsx`/`OpportunityCard.tsx`
@@ -357,6 +454,42 @@ Web — é o que deu pra verificar sem um.
         existe), mas o header não mostraria qual empresa é.
   - **Empresa vinculada agora aparece no header do contato** (ícone + nome, mesma posição do
         `ContextPanel.tsx` real) — não existia antes desta rodada.
+
+**Ajustes visuais no cabeçalho do lead** (pedido explícito, com uma correção de rumo logo em
+seguida):
+  - **"Modelos de mensagens"/"Agendar mensagem" ficam um embaixo do outro, no lado direito da linha
+    do nome** — não mais lado a lado (que disputava espaço com o nome na mesma linha) nem numa linha
+    própria abaixo (tentativa intermediária, revertida a pedido — o Bruno preferiu manter os botões
+    junto do nome, só empilhados). `LeadPanel.tsx` + `.header-actions`/`.active-chat-header-top` em
+    `styles.css`: `flex-direction: column` + `align-items: flex-end`, de volta dentro da mesma linha
+    do `<strong>` via `justify-content: space-between`.
+  - **Hover verde do botão**: cheguei a identificar e corrigir um bug sistêmico de especificidade CSS
+    (a regra genérica `button:hover` vazando fundo verde em botões "flat" que não deveriam ter isso —
+    afetava uns 10+ componentes, não só os dois do cabeçalho). O Bruno testou e não gostou do
+    resultado — pediu explicitamente pra reverter. **Revertido por completo**: o hover voltou a ser o
+    de antes (herdando o verde da regra genérica `button:hover:not(:disabled)`) em todos os
+    componentes onde a correção tinha sido aplicada. Registrado aqui pra não redescobrir o mesmo
+    "bug" numa rodada futura achando que é algo novo — é comportamento atual, mantido de propósito.
+
+**"Personalizar" simplificado + botão "Agendar envio" travando sem erro** (pedido explícito):
+  - **Calendário de "Personalizar" reduzido a um só bloco, largura cheia** — layout anterior (mês +
+    lista de horários scrollável lado a lado, réplica fiel do `SmartDatePicker.tsx` real) não cabia
+    bem nos ~300px úteis da sidebar; ficava apertado e o scroll da lista de horários era ruim. Cortada
+    a lista de horários inteira — o `<input type="time">` nativo (já existia como "Hora
+    personalizada") virou o único seletor de horário dentro de "Personalizar", e o calendário ganhou
+    a largura toda pra si (células maiores, mais legíveis). `buildWhatsAppTimeSlots` removida de
+    `whatsappDatePresets.ts` (ficou sem nenhum uso). Os presets com hora fixa da linha de cima (Em 1
+    hora, manhã 7h/8h/9h etc.) continuam do jeito que estavam — só "Personalizar" mudou.
+  - **Causa real do botão "Agendar envio" travando sem erro nenhum**: `chrome.runtime.sendMessage`
+    (a ponte sidebar → background.js, usada em toda chamada de API E no upload de arquivo) não tinha
+    timeout — se o service worker travasse ou fosse suspenso no meio de uma request, a promise nunca
+    resolvia nem rejeitava, e `saving`/`uploading` em `ScheduleMessagePanel.tsx` ficavam presos em
+    `true` pra sempre (o `finally` que os reseta nunca era alcançado), desabilitando o botão
+    silenciosamente, sem mensagem de erro nenhuma. Corrigido com um timeout de 25s
+    (`sendMessageWithTimeout` em `backgroundFetch.ts`) — pior caso agora vira um erro visível e
+    recuperável, não uma trava indefinida. Também soltei o botão "Gravar áudio": antes ficava preso
+    em "Aguardando gravação…" pra sempre se a aba de gravação fosse fechada sem terminar; agora
+    continua clicável pra tentar de novo.
 
 ## Ícones
 

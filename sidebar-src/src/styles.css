@@ -656,7 +656,7 @@ button.danger:hover:not(:disabled) {
 
 .active-chat-header-top {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
 }
@@ -671,10 +671,13 @@ button.danger:hover:not(:disabled) {
   white-space: nowrap;
 }
 
+/* No lado direito da linha do nome, uma embaixo da outra (não lado a
+   lado — lado a lado disputava espaço com o nome na mesma linha). */
 .header-actions {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
   flex-shrink: 0;
 }
 
@@ -1221,114 +1224,284 @@ button.danger:hover:not(:disabled) {
   color: hsl(0 70% 45%);
 }
 
-/* ── Modelos de mensagens ── */
+/* ── Modelos de mensagens (réplica visual de MessageCenterPanel.tsx —
+   header com contagem, busca, cards compactos com ações só no hover) ── */
+.message-library-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: hsl(var(--text-primary));
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid hsl(var(--border) / 0.6);
+}
+
+.message-library-header svg {
+  color: hsl(var(--color-primary));
+  flex-shrink: 0;
+}
+
+.message-library-count {
+  font-weight: 500;
+  color: hsl(var(--text-secondary) / 0.7);
+}
+
+.message-library-create-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  padding: 0;
+  color: hsl(var(--color-primary));
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.message-library-create-btn:hover {
+  text-decoration: underline;
+}
+
+.message-library-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.message-library-search svg {
+  position: absolute;
+  left: 9px;
+  color: hsl(var(--text-secondary) / 0.5);
+  pointer-events: none;
+}
+
+.message-library-search input {
+  width: 100%;
+  padding: 7px 26px;
+  font-size: 11.5px;
+  font-weight: 400;
+}
+
+.message-library-search button {
+  position: absolute;
+  right: 7px;
+  background: none;
+  border: none;
+  padding: 0;
+  color: hsl(var(--text-secondary));
+  cursor: pointer;
+}
+
 .message-library-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .message-library-item {
   background: hsl(var(--card));
-  border: 1px solid hsl(var(--border));
+  border: 1px solid hsl(var(--border) / 0.6);
   border-radius: 8px;
-  padding: 10px;
+  padding: 8px;
+  transition: border-color 0.15s ease;
+}
+
+.message-library-item:hover {
+  border-color: hsl(var(--color-primary) / 0.3);
+}
+
+.message-library-item-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.message-library-item-main {
+  min-width: 0;
+  flex: 1;
 }
 
 .message-library-item-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  font-size: 12.5px;
-  font-weight: 700;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
   color: hsl(var(--text-primary));
-  margin-bottom: 4px;
+}
+
+.message-library-item-header strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message-library-fav {
+  color: #f59e0b;
+  flex-shrink: 0;
 }
 
 .message-library-content {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 400;
   color: hsl(var(--text-secondary));
-  margin: 0 0 8px;
-  white-space: pre-wrap;
+  margin: 2px 0 0;
   line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.message-library-item button {
-  width: 100%;
+.message-library-file-line {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: hsl(var(--text-secondary));
+  margin: 2px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
+.message-library-file-line svg {
+  flex-shrink: 0;
+  color: hsl(var(--text-secondary) / 0.6);
+}
+
+/* Ações só aparecem no hover do card — igual ao real
+   (group-hover:opacity-100) — reduz o ruído visual da lista parada. */
 .message-library-item-actions {
   display: flex;
-  gap: 6px;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.12s ease;
 }
 
-.message-library-item-actions button {
-  width: auto;
-  flex: 1;
+.message-library-item:hover .message-library-item-actions,
+.message-library-item:focus-within .message-library-item-actions {
+  opacity: 1;
+}
+
+.message-library-item-actions .link-button {
+  font-size: 10.5px;
+  padding: 2px 4px;
+}
+
+.message-library-schedule-btn {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
+  gap: 3px;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--text-secondary));
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 999px;
+  cursor: pointer;
 }
 
-/* ── Agendar mensagem (reaproveita as classes activity-* do modal de
-   Nova Atividade — mesmo picker de data/presets, sem o wrapper de modal) ── */
-.schedule-message-panel {
+.message-library-schedule-btn:hover {
+  color: hsl(var(--color-primary));
+  border-color: hsl(var(--color-primary) / 0.3);
+}
+
+.message-library-category {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 9.5px;
+  font-weight: 600;
+  text-transform: capitalize;
+  color: hsl(var(--text-secondary));
+  background: hsl(var(--surface-hover));
+  padding: 1.5px 7px;
+  border-radius: 999px;
+}
+
+/* ── Agendar mensagem (réplica visual de ScheduleDropdown.tsx +
+   SmartDatePicker.tsx do app.voeops.com) ── */
+.schedule-panel {
   display: flex;
   flex-direction: column;
   gap: 12px;
   font-size: 12.5px;
-  font-weight: 600;
 }
 
-.schedule-message-panel label {
+.schedule-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: hsl(var(--text-primary));
+  padding-bottom: 8px;
+  border-bottom: 1px solid hsl(var(--border) / 0.6);
+}
+
+.schedule-panel-header svg {
+  color: hsl(var(--color-primary));
+}
+
+.schedule-content-card {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
+  background: hsl(var(--surface-hover) / 0.5);
+  border: 1px solid hsl(var(--border));
+  border-radius: 10px;
+  padding: 10px;
 }
 
-.schedule-message-panel button[type='submit'] {
+.schedule-textarea {
   width: 100%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
+  font-size: 12px;
+  font-weight: 400;
+  resize: vertical;
 }
 
-.schedule-pause-toggle {
-  flex-direction: row !important;
+.schedule-channel-row {
+  display: flex;
   align-items: center;
-  gap: 6px !important;
-  font-weight: 500 !important;
-  font-size: 11.5px;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.schedule-channel-row span {
   color: hsl(var(--text-secondary));
-}
-
-.schedule-pause-toggle input[type='checkbox'] {
-  width: auto;
-}
-
-.schedule-success {
-  font-size: 11.5px;
   font-weight: 600;
-  color: hsl(var(--color-primary-dark));
-  margin: 0;
+  flex-shrink: 0;
+}
+
+.schedule-channel-row select {
+  flex: 1;
+  min-width: 0;
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 5px 8px;
 }
 
 .schedule-media-preview {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: hsl(var(--surface-hover));
+  background: hsl(var(--card));
   border: 1px solid hsl(var(--border));
   border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 12px;
+  padding: 7px 9px;
+  font-size: 11.5px;
 }
 
 .schedule-media-badge {
@@ -1340,6 +1513,616 @@ button.danger:hover:not(:disabled) {
   border-radius: 999px;
   padding: 2px 7px;
   white-space: nowrap;
+}
+
+.schedule-media-preview strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.schedule-media-preview .link-button {
+  flex-shrink: 0;
+  font-size: 10px;
+}
+
+.schedule-use-template-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 0;
+  color: hsl(var(--color-primary));
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.schedule-use-template-btn:hover {
+  text-decoration: underline;
+}
+
+.schedule-template-tag {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: hsl(var(--color-primary) / 0.06);
+  border: 1px solid hsl(var(--color-primary) / 0.15);
+  color: hsl(var(--color-primary-dark));
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.schedule-template-tag span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.schedule-template-tag .link-button {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  color: hsl(var(--color-primary-dark));
+}
+
+/* ── CreateTemplateScreen.tsx (criar modelo de mensagem novo) ── */
+.template-type-row {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.template-type-btn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  padding: 7px 4px;
+  color: hsl(var(--text-secondary));
+  font-size: 9.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.template-type-btn:hover {
+  background: hsl(var(--surface-hover));
+}
+
+.template-type-btn.is-active {
+  border-color: hsl(var(--color-primary));
+  background: hsl(var(--color-primary) / 0.08);
+  color: hsl(var(--color-primary-dark));
+}
+
+/* ── TemplatePickerInline.tsx (escolher modelo de dentro do agendamento) ── */
+.template-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.template-picker-header span {
+  font-size: 12px;
+  font-weight: 700;
+  color: hsl(var(--text-primary));
+}
+
+.template-picker-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.template-picker-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 8px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.template-picker-item:hover {
+  background: hsl(var(--surface-hover));
+}
+
+.template-picker-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  color: hsl(var(--color-primary));
+}
+
+.template-picker-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.template-picker-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: hsl(var(--text-primary));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.template-picker-preview {
+  font-size: 10.5px;
+  color: hsl(var(--text-secondary));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.template-picker-chevron {
+  flex-shrink: 0;
+  color: hsl(var(--text-secondary) / 0.4);
+}
+
+.schedule-media-remove {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  padding: 2px;
+  color: hsl(var(--text-secondary));
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.schedule-media-remove:hover {
+  color: hsl(0 70% 50%);
+  background: hsl(0 70% 96%);
+}
+
+/* ── Anexar arquivo/foto/áudio novo (réplica de AttachmentMenu.tsx —
+   compacto, sem popup, dois botões + microfone) ── */
+.schedule-attach-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.schedule-attach-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 1px dashed hsl(var(--border));
+  color: hsl(var(--text-secondary));
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.schedule-attach-btn:hover:not(:disabled) {
+  color: hsl(var(--color-primary));
+  border-color: hsl(var(--color-primary) / 0.4);
+}
+
+.schedule-attach-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.schedule-recorder-hint {
+  font-size: 10.5px;
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* ── StandaloneRecorderPage.tsx (aba avulsa pra gravar áudio — getUserMedia
+   não funciona de dentro do iframe da sidebar, ver comentário no
+   ScheduleMessagePanel.tsx) ── */
+.standalone-recorder-page {
+  max-width: 380px;
+  margin: 60px auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.standalone-recorder-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: hsl(var(--text-primary));
+  margin: 0;
+  text-align: center;
+}
+
+.standalone-recorder-done {
+  max-width: 380px;
+  margin: 80px auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+
+/* ── Gravador de áudio (AudioRecorderPanel.tsx — réplica simplificada de
+   AudioRecorder.tsx: sem pausar/retomar, sem waveform ao vivo) ── */
+.audio-recorder {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.audio-recorder-error {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.audio-recorder-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  background: hsl(var(--surface-hover));
+  border: 1px solid hsl(var(--border));
+  border-radius: 999px;
+  padding: 6px 10px;
+}
+
+.audio-recorder-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: hsl(0 75% 55%);
+  flex-shrink: 0;
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.audio-recorder-time {
+  flex: 1;
+  font-size: 11px;
+  font-weight: 600;
+  color: hsl(var(--text-secondary));
+  font-variant-numeric: tabular-nums;
+}
+
+.audio-recorder-stop,
+.audio-recorder-play,
+.audio-recorder-use,
+.audio-recorder-discard {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.audio-recorder-stop {
+  width: 22px;
+  height: 22px;
+  background: hsl(0 75% 55%);
+  color: #fff;
+}
+
+.audio-recorder-play {
+  width: 20px;
+  height: 20px;
+  background: hsl(var(--color-primary) / 0.15);
+  color: hsl(var(--color-primary-dark));
+}
+
+.audio-recorder-use {
+  width: 24px;
+  height: 24px;
+  background: hsl(var(--color-primary));
+  color: #fff;
+}
+
+.audio-recorder-discard {
+  width: 22px;
+  height: 22px;
+  background: none;
+  color: hsl(var(--text-secondary));
+}
+
+.audio-recorder-discard:hover {
+  color: hsl(0 70% 50%);
+}
+
+.schedule-when-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.schedule-when-header .form-label-standalone {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: hsl(var(--text-secondary));
+}
+
+.schedule-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.schedule-preset-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--text-secondary));
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.schedule-preset-pill:hover:not(:disabled) {
+  background: hsl(var(--surface-hover));
+}
+
+.schedule-preset-pill.is-active {
+  border-color: hsl(var(--color-primary));
+  background: hsl(var(--color-primary) / 0.1);
+  color: hsl(var(--color-primary-dark));
+}
+
+/* Um calendário só, largura cheia — sem coluna de horários lado a lado
+   (não cabia bem nos ~300px úteis da sidebar; o horário é o
+   <input type="time"> nativo no rodapé, ver .schedule-calendar-footer). */
+.schedule-calendar-card {
+  border: 1px solid hsl(var(--border));
+  border-radius: 10px;
+  padding: 12px;
+  background: hsl(var(--surface-hover) / 0.4);
+  margin-top: 8px;
+}
+
+.schedule-calendar-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.schedule-calendar-nav span {
+  font-size: 12px;
+  font-weight: 700;
+  color: hsl(var(--text-primary));
+}
+
+.schedule-calendar-nav button {
+  background: none;
+  border: none;
+  padding: 4px;
+  color: hsl(var(--text-secondary));
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.schedule-calendar-nav button:hover {
+  background: hsl(var(--card));
+}
+
+.schedule-calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  margin-bottom: 3px;
+}
+
+.schedule-calendar-weekdays span {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: hsl(var(--text-secondary) / 0.6);
+}
+
+.schedule-calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.schedule-calendar-day {
+  width: 100%;
+  min-width: 0;
+  aspect-ratio: 1;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 500;
+  color: hsl(var(--text-primary));
+  cursor: pointer;
+}
+
+.schedule-calendar-day:hover:not(:disabled) {
+  background: hsl(var(--card));
+}
+
+.schedule-calendar-day:disabled {
+  color: hsl(var(--text-secondary) / 0.3);
+  cursor: not-allowed;
+}
+
+.schedule-calendar-day.is-today {
+  background: hsl(var(--color-primary) / 0.1);
+  color: hsl(var(--color-primary-dark));
+  font-weight: 700;
+}
+
+.schedule-calendar-day.is-selected {
+  background: hsl(var(--color-primary));
+  color: #fff;
+  font-weight: 700;
+}
+
+.schedule-calendar-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid hsl(var(--border) / 0.6);
+  font-size: 10.5px;
+  color: hsl(var(--text-secondary));
+}
+
+.schedule-calendar-footer input {
+  width: auto;
+  padding: 4px 7px;
+  font-size: 11px;
+}
+
+.schedule-calendar-footer .link-button {
+  margin-left: auto;
+}
+
+.schedule-relative-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 6px 9px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  background: hsl(var(--color-primary) / 0.06);
+  color: hsl(var(--color-primary-dark));
+  border: 1px solid hsl(var(--color-primary) / 0.15);
+}
+
+.schedule-relative-chip.is-late {
+  background: hsl(0 70% 97%);
+  color: hsl(0 70% 45%);
+  border-color: hsl(0 70% 85%);
+}
+
+.schedule-pause-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: hsl(var(--text-secondary));
+  cursor: pointer;
+}
+
+.schedule-toggle {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  width: 28px;
+  height: 16px;
+  border-radius: 999px;
+  border: none;
+  background: hsl(var(--border));
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  padding: 0;
+}
+
+.schedule-toggle.is-on {
+  background: hsl(var(--color-primary));
+}
+
+.schedule-toggle-dot {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #fff;
+  transition: transform 0.15s ease;
+}
+
+.schedule-toggle.is-on .schedule-toggle-dot {
+  transform: translateX(12px);
+}
+
+.schedule-success {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: hsl(var(--color-primary-dark));
+  margin: 0;
+}
+
+.schedule-block-reason {
+  font-size: 10.5px;
+  color: hsl(var(--text-secondary));
+  margin: 0;
+  text-align: center;
+}
+
+.schedule-submit-btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: hsl(var(--color-primary));
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.schedule-submit-btn:hover:not(:disabled) {
+  background: hsl(var(--color-primary-dark));
+}
+
+.schedule-submit-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* ── Campos personalizados ── */
