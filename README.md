@@ -136,6 +136,15 @@ esse token que autentica as chamadas a `/api/v1/opportunities`,
 - [~] Publicação na Chrome Web Store — item criado e zip (`v0.1.0`) aceito no upload no Developer
       Dashboard (2026-08-31). Ainda falta preencher a ficha da loja (descrição longa, screenshots,
       política de privacidade) e enviar pra revisão — não está publicada/pública ainda.
+      **1ª submissão rejeitada** por "solicitar, mas não utilizar a permissão `scripting`" — a
+      injeção de scripts no WhatsApp Web (`content.js`) sempre foi via `document.createElement
+      ('script')` + `appendChild`, nunca via `chrome.scripting.executeScript()`; a permissão
+      nunca teve uso real. Corrigido em `v0.1.1`: removida `scripting` e, na mesma auditoria,
+      `activeTab` também (zero uso real no código — nenhuma chamada depende da concessão
+      temporária que ela dá; `host_permissions` já cobre `web.whatsapp.com` de forma permanente).
+      `permissions` final: `storage` (`chrome.storage.local`, token/workspace — uso real
+      confirmado) + `tabs` (`chrome.tabs.create`, abrir WhatsApp Web e a aba avulsa de gravação de
+      áudio — uso real confirmado).
 
 **Modo Lead — fase 2 (expansão inspirada na extensão do RD Station, campos/nomenclatura 100% VOE):**
 em teste contra sessão real do WhatsApp Web. Itens marcados `[~]` ainda não tiveram uma rodada de
