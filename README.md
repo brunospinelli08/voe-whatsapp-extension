@@ -133,7 +133,9 @@ esse token que autentica as chamadas a `/api/v1/opportunities`,
 - [x] Modo Lead (fase 1) completo, testado de ponta a ponta em ambiente real
 - [ ] Modo Locatário ativo — fora do MVP, fase futura
 - [x] Ícones finais (símbolo oficial da VOE em 16/48/128px)
-- [ ] Publicação na Chrome Web Store
+- [~] Publicação na Chrome Web Store — item criado e zip (`v0.1.0`) aceito no upload no Developer
+      Dashboard (2026-08-31). Ainda falta preencher a ficha da loja (descrição longa, screenshots,
+      política de privacidade) e enviar pra revisão — não está publicada/pública ainda.
 
 **Modo Lead — fase 2 (expansão inspirada na extensão do RD Station, campos/nomenclatura 100% VOE):**
 em teste contra sessão real do WhatsApp Web. Itens marcados `[~]` ainda não tiveram uma rodada de
