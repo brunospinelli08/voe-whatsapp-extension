@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "VOE — Atendimento WhatsApp",
-  "description": "Painel de atendimento da VOE dentro do WhatsApp Web. Fallback para quando a conexão principal do módulo Conversas estiver indisponível.",
+  "description": "Painel de atendimento da VOE no WhatsApp Web. Fallback para quando a conexão principal do módulo Conversas estiver indisponível.",
   "version": "0.1.0",
 
   "action": {
