@@ -2364,7 +2364,13 @@ button.danger:hover:not(:disabled) {
   color: hsl(var(--text-secondary));
 }
 
-/* ── Status | Etapa (dropdowns lado a lado) ── */
+/* ── Status | Etapa (dropdowns lado a lado) + chips de Funil acima ── */
+.status-stage-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .status-stage-row {
   display: flex;
   gap: 8px;

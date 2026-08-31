@@ -30,6 +30,7 @@ import { CustomFieldInput, type CustomFieldValue } from './CustomFieldInput'
 import { SegmentFieldInput, type SegmentFieldValue } from './SegmentFieldInput'
 import { QualificationPicker } from './QualificationPicker'
 import { CompanySection, EMPTY_NEW_COMPANY, type CompanyMode, type NewCompanyData } from './CompanySection'
+import { CheckIcon, XIcon } from './Icons'
 
 // ── Helpers de moeda (mesma máscara do formulário real) ─────────────────────
 function maskBRL(raw: string): string {
@@ -332,11 +333,11 @@ export function CreateOpportunityForm({ chat, existingContactId, onCreated, onCa
 
       <div className="create-opportunity-form-actions">
         <button type="submit" disabled={creating}>
-          {creating ? 'Criando…' : 'Criar oportunidade'}
+          {creating ? 'Criando…' : <><CheckIcon size={13} /> Criar oportunidade</>}
         </button>
         {onCancel && (
           <button type="button" className="secondary" disabled={creating} onClick={onCancel}>
-            Cancelar
+            <XIcon size={13} /> Cancelar
           </button>
         )}
       </div>

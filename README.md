@@ -219,6 +219,19 @@ validação ao vivo depois de escritos.
         deliberadamente restrito a isso — reagendar (mudar data/hora) e reabrir uma cancelada ficam
         de fora; o resto do CRUD de atividades (concluir tarefa etc.) não fazia parte do pedido de
         agendamento de mensagens.
+  - **"+ Nova atividade" reposicionado** (`ActivitiesPanel.tsx`) — ficava embaixo da lista de
+        atividades; movido pra logo abaixo das abas Contexto/Atividades, acima do histórico
+        (pedido explícito do Bruno).
+  - **Trocar de funil** (`StatusStagePicker.tsx`, pedido explícito do Bruno) — espelha o chip
+        "Funil" que fica ao lado do status em `deals/[id]/page.tsx` no dashboard real, na mesma
+        posição relativa aqui (logo acima da dupla Status|Etapa). Em vez do menu popover em 2
+        passos do dashboard, reaproveita o mesmo padrão de chips já usado pra escolher funil em
+        Nova Oportunidade (`CreateOpportunityForm.tsx`, classes `.pipeline-chips`/`.pipeline-chip`)
+        — só aparece com mais de um funil no workspace, funil sem etapas fica desabilitado com
+        aviso. Escolher outro funil só troca as opções do `<select>` de Etapa; a mudança só é
+        salva de fato ao escolher uma etapa nele — sem endpoint novo, usa o mesmo
+        `PUT /api/v1/opportunities/:id/stage` que a troca de etapa já usava (o pipeline é derivado
+        do `stage_id` no backend). Ainda sem teste ao vivo.
 
 Com isso, as 4 fases do plano de agendamento de mensagens na extensão (espelhando o agendamento da
 aba Conversa real) estão implementadas — texto livre, biblioteca de mensagens (texto e mídia) e

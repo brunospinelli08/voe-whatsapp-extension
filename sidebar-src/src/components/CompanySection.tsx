@@ -4,9 +4,10 @@
 // (CNPJ, telefone, e-mail, Instagram, website, endereço, cidade, estado,
 // notas).
 
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 import { voeApi } from '../lib/apiClient'
 import { SearchSelect, type SearchableItem } from './SearchSelect'
+import { XIcon, LinkIcon, PlusIcon } from './Icons'
 
 export type CompanyMode = 'none' | 'link' | 'create'
 
@@ -56,27 +57,27 @@ export function CompanySection({
   return (
     <div className="form-section">
       <p className="action-menu-title">Empresa</p>
-      <div className="lead-choice-buttons">
+      <div className="company-mode-row">
         <button
           type="button"
-          className={mode === 'none' ? '' : 'secondary'}
+          className={`company-mode-btn${mode === 'none' ? ' is-active' : ''}`}
           onClick={() => onModeChange('none')}
         >
-          Sem empresa
+          <XIcon size={13} /> Nenhuma
         </button>
         <button
           type="button"
-          className={mode === 'link' ? '' : 'secondary'}
+          className={`company-mode-btn${mode === 'link' ? ' is-active' : ''}`}
           onClick={() => onModeChange('link')}
         >
-          Vincular existente
+          <LinkIcon size={13} /> Vincular
         </button>
         <button
           type="button"
-          className={mode === 'create' ? '' : 'secondary'}
+          className={`company-mode-btn${mode === 'create' ? ' is-active' : ''}`}
           onClick={() => onModeChange('create')}
         >
-          Criar nova
+          <PlusIcon size={13} /> Criar
         </button>
       </div>
 

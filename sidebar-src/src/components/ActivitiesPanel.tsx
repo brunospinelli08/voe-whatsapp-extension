@@ -96,6 +96,10 @@ export function ActivitiesPanel({ opportunityId, opportunityName, contactId, con
 
   return (
     <div className="activities-panel">
+      <button className="new-activity-btn" onClick={() => setShowModal(true)}>
+        <PlusIcon size={12} /> Nova atividade
+      </button>
+
       {activities.length === 0 && (
         <div className="activities-empty-state">
           <CalendarClockIcon size={28} className="activities-empty-icon" />
@@ -144,10 +148,6 @@ export function ActivitiesPanel({ opportunityId, opportunityName, contactId, con
           <span>{actionError}</span>
         </div>
       )}
-
-      <button className="new-activity-btn" onClick={() => setShowModal(true)}>
-        <PlusIcon size={12} /> Nova atividade
-      </button>
 
       {showModal && (
         <NewActivityModal

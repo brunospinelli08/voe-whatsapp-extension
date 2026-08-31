@@ -12,6 +12,19 @@
 // fica fora desta rodada — aqui a confirmação é direta (mesmo
 // comportamento que StatusActions.tsx já tinha), só "Perdido" continua
 // pedindo o motivo (useLossReasons), porque isso já existia e é barato.
+//
+// Trocar de funil (pedido explícito do Bruno) — no dashboard real
+// (deals/[id]/page.tsx) isso é um chip "Funil" ao lado do status que abre
+// um menu em 2 passos: escolher o funil de destino → escolher a etapa de
+// entrada nele. Aqui reaproveita o MESMO padrão de chips que já existe
+// pra escolher funil em Nova Oportunidade (CreateOpportunityForm.tsx,
+// classes .pipeline-chips/.pipeline-chip) em vez de inventar um menu
+// popover novo — os chips ficam logo acima da dupla Status|Etapa (mesma
+// posição relativa do chip real, colado no cabeçalho da oportunidade).
+// Escolher outro funil só troca as opções do <select> de Etapa; a
+// mudança de verdade só é salva quando uma etapa é escolhida — igual ao
+// "passo 2" do real (PUT /api/v1/opportunities/:id/stage já existente,
+// sem endpoint novo: pipeline é derivado do stage_id no backend).
 
 import { useEffect, useState } from 'react'
 import { voeApi } from '../lib/apiClient'
@@ -26,6 +39,7 @@ interface Stage {
 }
 interface Pipeline {
   id: string
+  name: string
   pipeline_stages: Stage[]
 }
 
@@ -48,7 +62,11 @@ interface Props {
 export function StatusStagePicker({
   opportunityId, workspaceId, pipelineId, currentStageId, currentStatus, onChanged,
 }: Props) {
-  const [stages, setStages] = useState<Stage[]>([])
+  const [pipelines, setPipelines] = useState<Pipeline[]>([])
+  // Funil "em visualização" no seletor — só diverge do funil real
+  // (`pipelineId`) enquanto o usuário está escolhendo outro funil pra
+  // mover a oportunidade pra ele.
+  const [viewedPipelineId, setViewedPipelineId] = useState(pipelineId)
   const [savingStatus, setSavingStatus] = useState(false)
   const [savingStage, setSavingStage] = useState(false)
   const [pickingLossReason, setPickingLossReason] = useState(false)
@@ -58,12 +76,21 @@ export function StatusStagePicker({
   useEffect(() => {
     voeApi
       .get<{ data: Pipeline[] }>('/api/v1/pipelines')
-      .then(res => {
-        const pipeline = res.data.find(p => p.id === pipelineId) ?? res.data[0]
-        setStages([...(pipeline?.pipeline_stages ?? [])].sort((a, b) => a.order - b.order))
-      })
-      .catch(() => setStages([]))
+      .then(res => setPipelines(res.data))
+      .catch(() => setPipelines([]))
+  }, [])
+
+  // Ressincroniza sempre que o funil real da oportunidade mudar (troca de
+  // etapa salva com sucesso, ou refetch externo) — sem isso, depois de
+  // mover pra outro funil o seletor continuaria "preso" mostrando o funil
+  // antigo escolhido manualmente.
+  useEffect(() => {
+    setViewedPipelineId(pipelineId)
   }, [pipelineId])
+
+  const viewedPipeline = pipelines.find(p => p.id === viewedPipelineId) ?? pipelines[0]
+  const stages = [...(viewedPipeline?.pipeline_stages ?? [])].sort((a, b) => a.order - b.order)
+  const switchingPipeline = viewedPipelineId !== pipelineId
 
   async function updateStatus(status: string, lostReason?: string) {
     setSavingStatus(true)
@@ -128,28 +155,57 @@ export function StatusStagePicker({
   }
 
   return (
-    <div className="status-stage-row">
-      <div className={`status-stage-select-wrap status-${currentStatus}`}>
-        <select
-          className="status-stage-select"
-          value={currentStatus}
-          disabled={savingStatus}
-          onChange={e => handleStatusChange(e.target.value)}
-        >
-          {STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-        </select>
-        <ChevronDownIcon className="status-stage-chevron" />
-      </div>
-      <div className="status-stage-select-wrap">
-        <select
-          className="status-stage-select"
-          value={currentStageId}
-          disabled={savingStage || stages.length === 0}
-          onChange={e => handleStageChange(e.target.value)}
-        >
-          {stages.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
-        <ChevronDownIcon className="status-stage-chevron" />
+    <div className="status-stage-panel">
+      {pipelines.length > 1 && (
+        <div>
+          <p className="form-label-standalone">Funil</p>
+          <div className="pipeline-chips">
+            {pipelines.map(p => {
+              const isEmpty = p.pipeline_stages.length === 0
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  disabled={isEmpty}
+                  title={isEmpty ? 'Este funil não tem etapas.' : undefined}
+                  className={`pipeline-chip${viewedPipelineId === p.id ? ' is-active' : ''}`}
+                  onClick={() => setViewedPipelineId(p.id)}
+                >
+                  {p.name}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      <div className="status-stage-row">
+        <div className={`status-stage-select-wrap status-${currentStatus}`}>
+          <select
+            className="status-stage-select"
+            value={currentStatus}
+            disabled={savingStatus}
+            onChange={e => handleStatusChange(e.target.value)}
+          >
+            {STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
+          <ChevronDownIcon className="status-stage-chevron" />
+        </div>
+        <div className="status-stage-select-wrap">
+          <select
+            className="status-stage-select"
+            value={stages.some(s => s.id === currentStageId) ? currentStageId : ''}
+            disabled={savingStage || stages.length === 0}
+            onChange={e => handleStageChange(e.target.value)}
+          >
+            {/* Só aparece ao trocar de funil: o valor atual não existe nas
+                etapas do funil escolhido, então força uma escolha explícita
+                em vez de cair silenciosamente na primeira etapa da lista. */}
+            {switchingPipeline && <option value="" disabled>Escolha a etapa…</option>}
+            {stages.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+          <ChevronDownIcon className="status-stage-chevron" />
+        </div>
       </div>
       {error && <p className="error-text">{error}</p>}
     </div>
