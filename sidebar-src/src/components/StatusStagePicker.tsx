@@ -16,15 +16,17 @@
 // Trocar de funil (pedido explícito do Bruno) — no dashboard real
 // (deals/[id]/page.tsx) isso é um chip "Funil" ao lado do status que abre
 // um menu em 2 passos: escolher o funil de destino → escolher a etapa de
-// entrada nele. Aqui reaproveita o MESMO padrão de chips que já existe
-// pra escolher funil em Nova Oportunidade (CreateOpportunityForm.tsx,
-// classes .pipeline-chips/.pipeline-chip) em vez de inventar um menu
-// popover novo — os chips ficam logo acima da dupla Status|Etapa (mesma
-// posição relativa do chip real, colado no cabeçalho da oportunidade).
-// Escolher outro funil só troca as opções do <select> de Etapa; a
-// mudança de verdade só é salva quando uma etapa é escolhida — igual ao
-// "passo 2" do real (PUT /api/v1/opportunities/:id/stage já existente,
-// sem endpoint novo: pipeline é derivado do stage_id no backend).
+// entrada nele. Aqui vira um terceiro <select>, no MESMO estilo visual da
+// dupla Status|Etapa (.status-stage-select-wrap/.status-stage-select) —
+// 2ª rodada: a 1ª usava chips (.pipeline-chips, o mesmo padrão de Nova
+// Oportunidade), mas o Bruno pediu pra ficar parecido com o select de
+// Etapa em vez disso. Só aparece com mais de um funil no workspace, numa
+// linha própria acima da dupla Status|Etapa (linha inteira pra caber o
+// nome do funil sem cortar). Escolher outro funil só troca as opções do
+// <select> de Etapa; a mudança de verdade só é salva quando uma etapa é
+// escolhida — igual ao "passo 2" do real (PUT /api/v1/opportunities/:id/
+// stage já existente, sem endpoint novo: pipeline é derivado do stage_id
+// no backend).
 
 import { useEffect, useState } from 'react'
 import { voeApi } from '../lib/apiClient'
@@ -157,25 +159,22 @@ export function StatusStagePicker({
   return (
     <div className="status-stage-panel">
       {pipelines.length > 1 && (
-        <div>
-          <p className="form-label-standalone">Funil</p>
-          <div className="pipeline-chips">
+        <div className="status-stage-select-wrap">
+          <select
+            className="status-stage-select"
+            value={viewedPipelineId ?? pipelines[0]?.id ?? ''}
+            onChange={e => setViewedPipelineId(e.target.value)}
+          >
             {pipelines.map(p => {
               const isEmpty = p.pipeline_stages.length === 0
               return (
-                <button
-                  key={p.id}
-                  type="button"
-                  disabled={isEmpty}
-                  title={isEmpty ? 'Este funil não tem etapas.' : undefined}
-                  className={`pipeline-chip${viewedPipelineId === p.id ? ' is-active' : ''}`}
-                  onClick={() => setViewedPipelineId(p.id)}
-                >
-                  {p.name}
-                </button>
+                <option key={p.id} value={p.id} disabled={isEmpty}>
+                  {p.name}{isEmpty ? ' (sem etapas)' : ''}
+                </option>
               )
             })}
-          </div>
+          </select>
+          <ChevronDownIcon className="status-stage-chevron" />
         </div>
       )}
 

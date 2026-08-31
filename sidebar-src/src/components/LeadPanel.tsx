@@ -14,6 +14,7 @@ import { LinkExistingOpportunityForm } from './LinkExistingOpportunityForm'
 import { OpportunityDetail } from './OpportunityDetail'
 import { ContactTagsEditor } from './ContactTagsEditor'
 import { ActivitiesPanel } from './ActivitiesPanel'
+import { MessageCenterToggle, MessageCenterScreen } from './MessageCenterPanel'
 import { Spinner } from './Spinner'
 import { AlertIcon, BriefcaseIcon, Building2Icon, ChevronLeftIcon, LinkIcon, PlusIcon, PhoneIcon, MailIcon, UserIcon } from './Icons'
 
@@ -34,6 +35,7 @@ export function LeadPanel({ chat, workspaceId, onContactContextChange }: Props) 
   const { loading, error, contact, opportunity, searched, refetch } = useLeadLookup(chat.phone)
   const [action, setAction] = useState<LeadAction>(null)
   const [tab, setTab] = useState<PanelTab>('contexto')
+  const [messageCenterOpen, setMessageCenterOpen] = useState(false)
 
   useEffect(() => {
     onContactContextChange?.(contact ? { contact, refetch } : null)
@@ -47,6 +49,15 @@ export function LeadPanel({ chat, workspaceId, onContactContextChange }: Props) 
   }
 
   const isLead = contact?.contact_type === 'lead'
+
+  // Tela cheia — some com header de contato, abas Contexto/Atividades, tudo
+  // (pedido explícito: "central de mensagens, nada mais"). Não depende do
+  // lookup de lead (loading/searched) porque a Central de Mensagens em si
+  // não precisa de contato nem oportunidade, só do chat ativo — dá pra abrir
+  // até antes do lookup terminar.
+  if (messageCenterOpen) {
+    return <MessageCenterScreen chatName={chat.name} chatPhone={chat.phone} onClose={() => setMessageCenterOpen(false)} />
+  }
 
   return (
     <div className="lead-panel">
@@ -69,6 +80,12 @@ export function LeadPanel({ chat, workspaceId, onContactContextChange }: Props) 
 
       {!loading && !error && searched && (
         <>
+          {/* ── Central de Mensagens — acima das abas, sempre visível nesse
+              chat (mesmo sem oportunidade vinculada, pedido explícito: ela
+              não depende de oportunidade, só do chat ativo). Abre em tela
+              cheia (ver early return acima). ── */}
+          <MessageCenterToggle onClick={() => setMessageCenterOpen(true)} />
+
           {/* ── Tabs: Contexto | Atividades ── */}
           <div className="panel-tabs">
             <button

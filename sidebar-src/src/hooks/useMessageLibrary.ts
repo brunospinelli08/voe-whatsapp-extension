@@ -10,6 +10,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { voeApi } from '../lib/apiClient'
 
+export interface CarouselCard {
+  header_type: 'image' | 'video'
+  header_url: string
+  body_text?: string
+  cta_url_text?: string
+  cta_url_value?: string
+}
+
 export interface MessageLibraryItem {
   id: string
   title: string
@@ -21,6 +29,8 @@ export interface MessageLibraryItem {
   category: string | null
   funnel_stage: string | null
   is_favorite: boolean
+  /** Só presente em itens do tipo carousel — cartões do carrossel (ver CarouselCard). */
+  carousel_cards: CarouselCard[] | null
 }
 
 export function useMessageLibrary() {

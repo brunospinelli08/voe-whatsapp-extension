@@ -232,6 +232,60 @@ validação ao vivo depois de escritos.
         salva de fato ao escolher uma etapa nele — sem endpoint novo, usa o mesmo
         `PUT /api/v1/opportunities/:id/stage` que a troca de etapa já usava (o pipeline é derivado
         do `stage_id` no backend). Ainda sem teste ao vivo.
+  - **Central de Mensagens** (`MessageCenterPanel.tsx`, pedido explícito do Bruno) — espelha a
+        Central de Mensagens real (`ChatMessageCenterBar.tsx`/`ChatMessageCenterPanel.tsx`, aba
+        WhatsApp da oportunidade em `app.voeops.com`). 4 rodadas até chegar no formato final: 1ª
+        barra de abas sempre visível acima de Contexto/Atividades (espaço fixo demais), 2ª botão
+        único que abria um bloco embutido (feio/apertado), 3ª tela cheia (estrutura certa, mas
+        ainda com classes emprestadas de outros componentes brigando por especificidade CSS com o
+        botão global — "feio" de novo, achado ao vivo), 4ª (atual) tela cheia com **classes
+        próprias, dedicadas** (`.msg-center-*`), sem mais emprestar `.template-type-row`/
+        `.template-type-btn` nem `.message-library-create-btn`. `MessageCenterToggle` é o botão de
+        entrada (acima das abas, largura inteira, cartão com selo de ícone + chevron, sempre
+        visível nesse chat mesmo sem oportunidade vinculada — não depende de oportunidade, só do
+        chat ativo); `MessageCenterScreen` é a tela cheia que `LeadPanel.tsx` renderiza SOZINHA ao
+        abrir — sem header de contato, sem abas Contexto/Atividades, só "← Voltar"
+        (`.back-button`, neutro — não `.back-button-danger`, vermelho, que é só pra ações
+        destrutivas) pra sair. Grade de tipo em `display:grid` com colunas fixas (`repeat(4,
+        1fr)`) — não `flex-wrap` com `flex:1`, que desalinhava a 2ª linha (achado ao vivo: "Todos
+        Texto Áudio Imagem Vídeo Documento Carrossel completamente desalinhados"). "Criar modelo"
+        virou um CTA com borda tracejada, não mais um linkzinho de texto perdido. Aba "Todos"
+        (**pedido extra que o real não tem**) já vem selecionada por padrão ao abrir. Cobre os 6
+        tipos (texto, áudio, imagem, vídeo, documento, carrossel — endpoint
+        `GET /api/v1/message-library` **editado nesta rodada** em `app.voeops.com` pra devolver
+        `carousel_cards`, que faltava).
+      - **Achado ao vivo, importante pro resto da extensão também**: a regra global `button {
+        background: hsl(var(--color-primary)); color: #fff; }` + `button:hover:not(:disabled) {
+        background: hsl(var(--color-primary-dark)); … }` (topo de `styles.css`) tem especificidade
+        (0,2,1) no hover — MAIOR que uma classe customizada só com `:hover` (0,2,0). Resultado: o
+        hover "genérico" vencia o customizado em botões próprios (`.msg-center-toggle`,
+        `.msg-center-type-btn`), trocando o fundo pra cor primária escura por cima de um texto que
+        já era dessa mesma cor — "o botão fica tudo da mesma coisa" (texto sumia). Correção: todo
+        seletor `:hover` de um botão customizado precisa repetir `:not(:disabled)` (ex:
+        `.minha-classe:hover:not(:disabled)`) pra igualar/superar a especificidade da regra
+        global, mesmo quando o elemento nunca fica de fato disabled. Vale pra qualquer botão novo
+        na extensão daqui pra frente, não só a Central de Mensagens.
+      - **"Colar na conversa"** (pedido explícito, no lugar do par Inserir/Enviar do real — ver
+        `pasteIntoChat.ts`) — preenche a caixa de digitar do WhatsApp Web de verdade (texto) ou
+        simula um Ctrl+V de arquivo nela (mídia), sempre deixando o envio de fato pro clique do
+        próprio usuário; nunca envia sozinho. Só carrossel fica sem essa ação (é um formato
+        interativo da Cloud API, sem equivalente manual de "colar" — mesma limitação do real).
+        Arquitetura em 3 pontas: sidebar pede a mídia em base64 pro `background.js` (mesmo motivo
+        de CORS de `backgroundFetch.ts` — a sidebar não alcança o Storage do Supabase direto),
+        manda o resultado pro `content.js` via `postMessage` (`window.parent`, canal novo no
+        sentido oposto ao de `WHATSAPP_EVENT`), que já tem acesso ao DOM real do WhatsApp Web:
+        texto via `execCommand('insertText', …)` (dispara os eventos que o compositor React do
+        WhatsApp escuta), mídia via `ClipboardEvent('paste', { clipboardData })` sintético (o
+        próprio handler de paste do WhatsApp reconhece o arquivo e abre o preview de envio dele).
+        **Os seletores da caixa de digitar (`content.js`) e o mecanismo de colar inteiro ainda não
+        tiveram nenhum teste ao vivo contra a página real do WhatsApp Web** — maior risco dessa
+        rodada, precisa validação antes de confiar.
+      - **"Criar modelo"** (pedido explícito) não abre formulário na extensão — link externo direto
+        pra VOE, `Configurações → Conversas → Central de Mensagens`
+        (`?nav=conversas&tab=central`, deep link novo em `app.voeops.com/settings/page.tsx` pra
+        cair já na sub-aba certa, adicionado nesta rodada especificamente pra isso).
+      - Sem categorias/tags/"modelos" (coleções) do real nesta rodada — só busca por
+        título/conteúdo; a extensão não tem os endpoints desses recursos ainda.
 
 Com isso, as 4 fases do plano de agendamento de mensagens na extensão (espelhando o agendamento da
 aba Conversa real) estão implementadas — texto livre, biblioteca de mensagens (texto e mídia) e

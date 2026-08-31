@@ -22,7 +22,7 @@ import { fileToBase64 } from './fileBase64'
 // em até 25s, não um travamento silencioso indefinido.
 const MESSAGE_TIMEOUT_MS = 25_000
 
-function sendMessageWithTimeout<T>(message: unknown): Promise<T> {
+export function sendMessageWithTimeout<T>(message: unknown): Promise<T> {
   return Promise.race([
     chrome.runtime.sendMessage(message) as Promise<T>,
     new Promise<T>((_, reject) =>
