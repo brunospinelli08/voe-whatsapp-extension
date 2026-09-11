@@ -1,10 +1,6 @@
-// useOriginOptions.ts
-// Opções de "Origem" (origin_options) configuradas no workspace, via
-// GET /api/v1/origin-options — endpoint novo. Nomenclatura confirmada
-// contra o dashboard real: é "Origem", não "Fonte" (termo do RD Station).
-
 import { useEffect, useState } from 'react'
 import { voeApi } from '../lib/apiClient'
+import { cachedFetch } from '../lib/configCache'
 
 export interface OriginOption {
   id: string
@@ -17,23 +13,11 @@ export function useOriginOptions() {
 
   useEffect(() => {
     let mounted = true
-    setLoading(true)
-
-    voeApi
-      .get<{ data: OriginOption[] }>('/api/v1/origin-options')
-      .then(res => {
-        if (mounted) setOrigins(res.data)
-      })
-      .catch(() => {
-        if (mounted) setOrigins([])
-      })
-      .finally(() => {
-        if (mounted) setLoading(false)
-      })
-
-    return () => {
-      mounted = false
-    }
+    cachedFetch('origin-options', () => voeApi.get<{ data: OriginOption[] }>('/api/v1/origin-options').then(r => r.data))
+      .then(data => { if (mounted) setOrigins(data) })
+      .catch(() => { if (mounted) setOrigins([]) })
+      .finally(() => { if (mounted) setLoading(false) })
+    return () => { mounted = false }
   }, [])
 
   return { origins, loading }

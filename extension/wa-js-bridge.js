@@ -1,15 +1,8 @@
 // wa-js-bridge.js
-// Este arquivo roda no CONTEXTO REAL da página do WhatsApp Web (não no
-// mundo isolado da extensão) — é o único jeito de acessar os módulos
-// internos do WhatsApp. Depende da lib @wppconnect/wa-js (wppconnect-wa.js)
-// já ter sido carregada nesse mesmo contexto antes deste script (ver
-// loadWaJsBridge em content.js).
-//
-// Responsabilidade: saber qual chat individual está ativo agora e disparar
-// um CustomEvent('VOE_WHATSAPP_EVENT') com { phone, name } (ou null, quando
-// nenhum chat individual está ativo, é um grupo, ou é um contato @lid sem
-// telefone resolvido — ver resolveActiveChat) — o content.js escuta esse
-// evento e repassa pra sidebar via postMessage.
+// Roda no CONTEXTO REAL da página do WhatsApp Web.
+// Detecta o chat ativo e dispara VOE_WHATSAPP_EVENT.
+
+let chatSeq = 0
 
 function waitForWppReady() {
   if (typeof WPP === 'undefined' || !WPP.isFullReady) {
@@ -22,27 +15,46 @@ function waitForWppReady() {
 function onWppReady() {
   console.log('[VOE Extension] wa-js pronto (WPP.isFullReady) — escutando chat.active_chat')
 
+  // Escuta mudanças de chat
   WPP.on('chat.active_chat', async chat => {
-    dispatchChatEvent(await resolveActiveChat(chat))
+    const seq = ++chatSeq
+    dispatchChatEvent(null)
+    const result = await resolveActiveChat(chat)
+    if (seq !== chatSeq) return
+    dispatchChatEvent(result)
   })
+
+  // Handshake: sidebar pede o chat atual ao inicializar.
+  // content.js repassa como CustomEvent VOE_REQUEST_ACTIVE_CHAT.
+  document.addEventListener('VOE_REQUEST_ACTIVE_CHAT', async () => {
+    try {
+      const activeChat = WPP.chat.getActiveChat()
+      if (activeChat) {
+        const result = await resolveActiveChat(activeChat)
+        dispatchChatEvent(result)
+      }
+    } catch (err) {
+      console.warn('[VOE Extension] Erro ao resolver chat ativo no handshake:', err)
+    }
+  })
+
+  // Dispara o chat atual logo que o bridge fica pronto (caso a sidebar
+  // já esteja carregada esperando)
+  try {
+    const activeChat = WPP.chat.getActiveChat()
+    if (activeChat) {
+      resolveActiveChat(activeChat).then(result => {
+        if (chatSeq === 0) dispatchChatEvent(result)
+      })
+    }
+  } catch (_) { /* nenhum chat aberto ainda */ }
 }
 
 async function resolveActiveChat(chat) {
   if (!chat || chat.isGroup) {
-    // Sem chat ativo, ou é um grupo — grupos não têm um único telefone
-    // associado, então por enquanto não tratamos esse caso.
     return null
   }
 
-  // O WhatsApp vem migrando contatos pra IDs do tipo @lid (Linked ID —
-  // recurso de privacidade que esconde o telefone real, ex: contas
-  // Business, comunidades, novos usuários). Quando isso acontece,
-  // chat.id.user NÃO é o telefone — é um número interno enorme e sem
-  // relação nenhuma com o telefone de verdade (foi assim que apareceu
-  // "207086512263415" em vez do telefone real do cliente). Nesses casos,
-  // o wa-js resolve o telefone de verdade via contact.pnForLid (Phone
-  // Number for LID) — mas só se o WhatsApp já tiver essa relação em
-  // cache localmente (pode não ter, em casos raros).
   const isLid = typeof chat.id?.isLid === 'function' ? chat.id.isLid() : chat.id?.server === 'lid'
 
   let contact = null
@@ -58,10 +70,7 @@ async function resolveActiveChat(chat) {
     if (resolved) {
       phoneWid = resolved
     } else {
-      // Não conseguimos resolver o telefone real — melhor não mandar o
-      // LID pra frente disfarçado de telefone (criaria lead com telefone
-      // errado). Loga bem visível pra facilitar diagnóstico ao vivo.
-      console.warn('[VOE Extension] Chat com ID @lid sem telefone resolvido (contact.pnForLid ausente):', chat.id?.toString?.() ?? chat.id)
+      console.warn('[VOE Extension] Chat com ID @lid sem telefone resolvido:', chat.id?.toString?.() ?? chat.id)
       return null
     }
   }

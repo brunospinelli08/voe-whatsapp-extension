@@ -1,12 +1,6 @@
-// useChannels.ts
-// Canais de WhatsApp do workspace (whatsapp_channels, via GET
-// /api/v1/channels — endpoint novo, criado especificamente pra permitir
-// agendar mensagens na extensão: o dashboard sabe o channel_id de graça
-// porque já está dentro de uma conversa aberta; a extensão não tinha
-// nenhuma noção de canal até agora). Só leitura.
-
 import { useEffect, useState } from 'react'
 import { voeApi } from '../lib/apiClient'
+import { cachedFetch } from '../lib/configCache'
 
 export interface WhatsAppChannel {
   id: string
@@ -26,22 +20,11 @@ export function useChannels() {
     let mounted = true
     setLoading(true)
     setError(null)
-
-    voeApi
-      .get<{ data: WhatsAppChannel[] }>('/api/v1/channels')
-      .then(res => {
-        if (mounted) setChannels(res.data)
-      })
-      .catch(err => {
-        if (mounted) setError(err instanceof Error ? err.message : 'Erro ao buscar canais')
-      })
-      .finally(() => {
-        if (mounted) setLoading(false)
-      })
-
-    return () => {
-      mounted = false
-    }
+    cachedFetch('channels', () => voeApi.get<{ data: WhatsAppChannel[] }>('/api/v1/channels').then(r => r.data), 2 * 60 * 1000)
+      .then(data => { if (mounted) setChannels(data) })
+      .catch(err => { if (mounted) setError(err instanceof Error ? err.message : 'Erro ao buscar canais') })
+      .finally(() => { if (mounted) setLoading(false) })
+    return () => { mounted = false }
   }, [])
 
   return { channels, loading, error }

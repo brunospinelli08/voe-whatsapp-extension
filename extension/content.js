@@ -1,9 +1,13 @@
 // content.js
 // Roda no "mundo isolado" da extensão, dentro de web.whatsapp.com.
 // Responsável por: detectar que o WhatsApp Web carregou, injetar a sidebar
-// (iframe com o app da VOE) e redimensionar o layout pra abrir espaço.
+// (iframe com o app da VOE), redimensionar o layout e gerenciar colapso.
 
 const SIDEBAR_WIDTH = 340
+const COLLAPSED_WIDTH = 36
+
+let lastReportedChat = null
+let sidebarCollapsed = false
 
 function isWhatsAppWebReady() {
   return (
@@ -12,17 +16,22 @@ function isWhatsAppWebReady() {
   )
 }
 
-function injectSidebar() {
-  if (document.getElementById('voe-sidebar-frame')) return // já injetado
+async function injectSidebar() {
+  if (document.getElementById('voe-sidebar-frame')) return
 
+  let sidebarUrl = chrome.runtime.getURL('sidebar/index.html')
+  try {
+    const stored = await chrome.storage.local.get('VOE_DEV_MODE')
+    if (stored.VOE_DEV_MODE) {
+      sidebarUrl = 'https://localhost:5173'
+      console.info('[VOE Extension] Dev mode ativo — sidebar via localhost:5173')
+    }
+  } catch (_) { /* storage indisponível */ }
+
+  // ── Iframe da sidebar ──
   const iframe = document.createElement('iframe')
   iframe.id = 'voe-sidebar-frame'
-  iframe.src = chrome.runtime.getURL('sidebar/index.html')
-  // Sem isso, getUserMedia (gravação de áudio pra agendar mensagem) é
-  // bloqueado por padrão dentro de um iframe cross-origin — mesmo sendo um
-  // iframe da própria extensão, embutido numa página de terceiro
-  // (web.whatsapp.com) ele ainda precisa da permissão delegada
-  // explicitamente via Permissions Policy.
+  iframe.src = sidebarUrl
   iframe.allow = 'microphone'
   iframe.style.cssText = `
     position: fixed;
@@ -31,15 +40,75 @@ function injectSidebar() {
     width: ${SIDEBAR_WIDTH}px;
     height: 100%;
     border: none;
+    background: hsl(228, 33%, 97%);
     z-index: 9999;
+    transition: width 0.2s ease, opacity 0.2s ease;
   `
   document.body.appendChild(iframe)
 
-  // Abre espaço no layout do WhatsApp Web pra sidebar não sobrepor a conversa
+  // ── Botão de colapsar/expandir ──
+  const toggleBtn = document.createElement('button')
+  toggleBtn.id = 'voe-sidebar-toggle'
+  toggleBtn.title = 'Recolher painel VOE'
+  toggleBtn.innerHTML = '‹'
+  toggleBtn.style.cssText = `
+    position: fixed;
+    top: 50%;
+    right: ${SIDEBAR_WIDTH}px;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 48px;
+    background: hsl(175, 100%, 39%);
+    color: white;
+    border: none;
+    border-radius: 6px 0 0 6px;
+    cursor: pointer;
+    z-index: 10000;
+    font-size: 14px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: right 0.2s ease;
+    box-shadow: -2px 0 6px rgba(0,0,0,0.15);
+  `
+  toggleBtn.addEventListener('click', toggleSidebar)
+  document.body.appendChild(toggleBtn)
+
+  // Abre espaço no layout do WhatsApp Web
   const appElement = document.getElementById('app')
   if (appElement) {
     appElement.style.width = `calc(100% - ${SIDEBAR_WIDTH}px)`
     appElement.style.maxWidth = '100%'
+    appElement.style.transition = 'width 0.2s ease'
+  }
+}
+
+function toggleSidebar() {
+  const iframe = document.getElementById('voe-sidebar-frame')
+  const toggleBtn = document.getElementById('voe-sidebar-toggle')
+  const appElement = document.getElementById('app')
+  if (!iframe || !toggleBtn) return
+
+  sidebarCollapsed = !sidebarCollapsed
+
+  if (sidebarCollapsed) {
+    iframe.style.width = '0px'
+    iframe.style.opacity = '0'
+    iframe.style.pointerEvents = 'none'
+    toggleBtn.style.right = '0px'
+    toggleBtn.innerHTML = '›'
+    toggleBtn.title = 'Expandir painel VOE'
+    toggleBtn.style.borderRadius = '6px 0 0 6px'
+    if (appElement) appElement.style.width = 'calc(100% - 20px)'
+  } else {
+    iframe.style.width = `${SIDEBAR_WIDTH}px`
+    iframe.style.opacity = '1'
+    iframe.style.pointerEvents = 'auto'
+    toggleBtn.style.right = `${SIDEBAR_WIDTH}px`
+    toggleBtn.innerHTML = '‹'
+    toggleBtn.title = 'Recolher painel VOE'
+    if (appElement) appElement.style.width = `calc(100% - ${SIDEBAR_WIDTH}px)`
   }
 }
 
@@ -51,12 +120,6 @@ function loadStylesheetOverrides() {
 }
 
 function loadWaJsBridge() {
-  // Injeta os scripts no contexto REAL da página (não no mundo isolado da
-  // extensão). É assim que conseguimos acessar os módulos internos do
-  // WhatsApp Web. A ordem importa: a lib wa-js precisa estar carregada e
-  // executada ANTES do bridge, então encadeamos via onload em vez de
-  // simplesmente inserir os dois scripts em sequência (scripts injetados
-  // dinamicamente são async por padrão e podem executar fora de ordem).
   const waJsLib = document.createElement('script')
   waJsLib.src = chrome.runtime.getURL('extension/wppconnect-wa.js')
   waJsLib.onload = () => {
@@ -79,11 +142,9 @@ function waitForWhatsAppWeb() {
 
 waitForWhatsAppWeb()
 
-// Ponte de eventos: página real -> content script -> sidebar (iframe)
-// wa-js-bridge.js dispara este evento sempre que o chat ativo muda,
-// com { phone, name } do contato (ou null, se nenhum chat individual
-// estiver ativo). Aqui só repassamos pro iframe via postMessage.
+// ── Ponte: página real -> content script -> sidebar (iframe) ──
 document.addEventListener('VOE_WHATSAPP_EVENT', event => {
+  lastReportedChat = event.detail
   const sidebarFrame = document.getElementById('voe-sidebar-frame')
   if (sidebarFrame) {
     sidebarFrame.contentWindow.postMessage(
@@ -93,19 +154,16 @@ document.addEventListener('VOE_WHATSAPP_EVENT', event => {
   }
 })
 
-// ── "Colar na conversa" (Central de Mensagens) ──────────────────────────
-// Ponte no sentido oposto: sidebar (iframe) -> content.js -> DOM real do
-// WhatsApp Web. A sidebar não tem acesso a esse DOM (é cross-origin), mas
-// content.js sim — mesmo "mundo isolado" da extensão, DOM compartilhado com
-// a página. Ver lib/pasteIntoChat.ts na sidebar pro lado que manda a
-// mensagem e espera a resposta.
+// ── Handshake: sidebar pede o chat ativo atual ao inicializar ──
+// wa-js-bridge escuta VOE_REQUEST_ACTIVE_CHAT e responde com o chat atual
+// via VOE_WHATSAPP_EVENT. Mas o bridge roda no contexto real da página,
+// não escuta postMessage do iframe — então o content.js faz a ponte:
+// recebe o pedido do iframe e dispara um CustomEvent pro bridge.
 //
-// Seletores da caixa de digitar em ordem de confiança — sem teste ao vivo
-// contra a página real ainda, então mantém fallbacks: o WhatsApp Web já
-// trocou os atributos internos várias vezes ao longo dos anos (é por isso
-// que wa-js-bridge.js prefere os módulos internos do wa-js em vez de
-// seletores de DOM sempre que dá — mas pra ACHAR a caixa de digitar não
-// tem equivalente no wa-js, que é focado em dados, não em UI).
+// Também responde com o lastReportedChat se já tiver (o bridge pode ainda
+// não ter respondido, mas o content.js já tem o último evento guardado).
+
+// ── Ponte sidebar -> content.js ──────────────────────────────────────────
 const COMPOSE_BOX_SELECTORS = [
   '[data-testid="conversation-compose-box-input"]',
   'footer [contenteditable="true"][data-tab]',
@@ -128,18 +186,8 @@ function base64ToFile(base64, fileName, mimeType) {
   return new File([bytes], fileName, { type: mimeType })
 }
 
-/**
- * Insere texto puro na caixa de digitar. execCommand tá deprecated na spec,
- * mas continua sendo o jeito mais confiável de escrever num contenteditable
- * de terceiro respeitando o próprio ciclo de eventos dele — dispara 'input',
- * que é o que editores baseados em React (o compositor do WhatsApp Web é um)
- * escutam pra sincronizar o estado interno. Mesma técnica usada por
- * extensões de resposta rápida pro WhatsApp Web em geral.
- */
 function pasteTextIntoComposeBox(box, text) {
   box.focus()
-  // Garante o cursor no FIM do que já estiver digitado (em vez de inserir
-  // no meio de um texto parcial que o usuário já tivesse começado).
   const selection = window.getSelection()
   const range = document.createRange()
   range.selectNodeContents(box)
@@ -149,13 +197,6 @@ function pasteTextIntoComposeBox(box, text) {
   document.execCommand('insertText', false, text)
 }
 
-/**
- * "Cola" um arquivo (áudio/imagem/vídeo/documento) simulando um Ctrl+V de
- * verdade — diferente de texto, arquivo não dá pra inserir via execCommand.
- * O próprio handler de paste do WhatsApp Web já sabe reconhecer um arquivo
- * em clipboardData.files e abrir o preview de envio dele, o mesmo caminho
- * que um paste manual de imagem/documento usa.
- */
 function pasteFileIntoComposeBox(box, file) {
   const dataTransfer = new DataTransfer()
   dataTransfer.items.add(file)
@@ -165,33 +206,61 @@ function pasteFileIntoComposeBox(box, file) {
 }
 
 window.addEventListener('message', event => {
-  if (event.data?.type !== 'VOE_PASTE_INTO_CHAT') return
-  const { id, payload } = event.data
   const sidebarFrame = document.getElementById('voe-sidebar-frame')
   if (!sidebarFrame) return
 
-  function reply(ok, error) {
-    sidebarFrame.contentWindow.postMessage({ type: 'VOE_PASTE_RESULT', id, ok, error }, '*')
-  }
-
-  const box = findComposeBox()
-  if (!box) {
-    reply(false, 'Abra uma conversa no WhatsApp Web antes de colar.')
+  // ── Handshake: sidebar pede o chat ativo ──
+  if (event.data?.type === 'VOE_REQUEST_ACTIVE_CHAT') {
+    // Responde imediatamente com o que já temos
+    if (lastReportedChat) {
+      sidebarFrame.contentWindow.postMessage(
+        { type: 'WHATSAPP_EVENT', payload: lastReportedChat },
+        '*',
+      )
+    }
+    // Também pede pro bridge resolver o chat atual (pode ter mudado)
+    document.dispatchEvent(new CustomEvent('VOE_REQUEST_ACTIVE_CHAT'))
     return
   }
 
-  try {
-    if (payload?.kind === 'text') {
-      pasteTextIntoComposeBox(box, payload.text)
-    } else if (payload?.kind === 'file') {
-      const file = base64ToFile(payload.base64, payload.fileName, payload.mimeType)
-      pasteFileIntoComposeBox(box, file)
-    } else {
-      reply(false, 'Tipo de conteúdo desconhecido.')
+  // ── "Colar na conversa" ──
+  if (event.data?.type === 'VOE_PASTE_INTO_CHAT') {
+    const { id, payload } = event.data
+
+    function reply(ok, error) {
+      sidebarFrame.contentWindow.postMessage({ type: 'VOE_PASTE_RESULT', id, ok, error }, '*')
+    }
+
+    const box = findComposeBox()
+    if (!box) {
+      reply(false, 'Abra uma conversa no WhatsApp Web antes de colar.')
       return
     }
-    reply(true)
-  } catch (err) {
-    reply(false, err instanceof Error ? err.message : String(err))
+
+    try {
+      if (payload?.kind === 'text') {
+        pasteTextIntoComposeBox(box, payload.text)
+      } else if (payload?.kind === 'file') {
+        const file = base64ToFile(payload.base64, payload.fileName, payload.mimeType)
+        pasteFileIntoComposeBox(box, file)
+      } else {
+        reply(false, 'Tipo de conteúdo desconhecido.')
+        return
+      }
+      reply(true)
+    } catch (err) {
+      reply(false, err instanceof Error ? err.message : String(err))
+    }
+    return
+  }
+
+  // ── Consulta do chat ativo (verificação antes de colar mídia) ──
+  if (event.data?.type === 'VOE_GET_CURRENT_CHAT') {
+    sidebarFrame.contentWindow.postMessage({
+      type: 'VOE_CURRENT_CHAT_RESULT',
+      id: event.data.id,
+      phone: lastReportedChat?.phone ?? null,
+    }, '*')
+    return
   }
 })

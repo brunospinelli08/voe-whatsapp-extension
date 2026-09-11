@@ -7,6 +7,7 @@
 import { FormEvent, useState } from 'react'
 import type { ActiveChat } from '../hooks/useActiveChat'
 import { voeApi } from '../lib/apiClient'
+import { normalizeToE164 } from '../lib/phoneUtils'
 
 interface Props {
   chat: ActiveChat

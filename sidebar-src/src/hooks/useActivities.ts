@@ -1,26 +1,10 @@
 // useActivities.ts
-// Feed de atividades (tabela `activities` do app.voeops.com — visitas,
-// reuniões, tarefas, WhatsApp agendado) associadas a uma oportunidade.
-// Diferente das anotações que a extensão já cria (contact_events, via
-// NotesForm) — é o mesmo feed que aparece na aba "Atividades" da tela real
-// de Oportunidades no dashboard.
-//
-// Nota de nomenclatura do próprio backend: o endpoint chamado
-// /api/v1/activities na verdade escreve em contact_events (rota legada,
-// ver comentário no arquivo). É /api/v1/tasks que lê/escreve na tabela
-// `activities` de verdade — confirmado batendo com o schema real do
-// Supabase antes de usar isso aqui.
-//
-// cancelActivity/sendNowActivity (fase 4 do agendamento de mensagens) via
-// PUT /api/v1/tasks/[id] (endpoint já existente, aceita update parcial) —
-// mesma semântica exata de cancelActivity/sendNowActivity em
-// useNewActivities.ts (app.voeops.com): cancelar só muda status pra
-// "cancelada" (não deleta); "enviar agora" adianta scheduled_at pra agora
-// mantendo status "agendada", o scheduler.worker pega na próxima passada
-// (≤30s) pelo mesmo fluxo de envio normal — não é um caminho de envio à
-// parte.
+// Feed de atividades (tabela `activities`) associadas a uma oportunidade.
+// Mesma semântica do dashboard: cancelar muda status pra "cancelada";
+// "enviar agora" adianta scheduled_at, o scheduler.worker pega na próxima
+// passada (<=30s).
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { voeApi } from '../lib/apiClient'
 
 export interface Activity {
@@ -40,6 +24,12 @@ export function useActivities(opportunityId: string | null) {
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
 
   const fetchActivities = useCallback(async () => {
     if (!opportunityId) {
@@ -52,11 +42,13 @@ export function useActivities(opportunityId: string | null) {
       const res = await voeApi.get<{ data: Activity[] }>(
         `/api/v1/tasks?opportunity_id=${opportunityId}`,
       )
+      if (!mountedRef.current) return
       setActivities(res.data)
     } catch (err) {
+      if (!mountedRef.current) return
       setError(err instanceof Error ? err.message : 'Erro ao buscar atividades')
     } finally {
-      setLoading(false)
+      if (mountedRef.current) setLoading(false)
     }
   }, [opportunityId])
 
@@ -69,7 +61,7 @@ export function useActivities(opportunityId: string | null) {
       status: 'cancelada',
       cancelled_at: new Date().toISOString(),
     })
-    await fetchActivities()
+    if (mountedRef.current) await fetchActivities()
   }, [fetchActivities])
 
   const sendNowActivity = useCallback(async (id: string) => {
@@ -80,7 +72,7 @@ export function useActivities(opportunityId: string | null) {
       due_date: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
       due_time: `${pad(now.getHours())}:${pad(now.getMinutes())}`,
     })
-    await fetchActivities()
+    if (mountedRef.current) await fetchActivities()
   }, [fetchActivities])
 
   return { activities, loading, error, refetch: fetchActivities, cancelActivity, sendNowActivity }

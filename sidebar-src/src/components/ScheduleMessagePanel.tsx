@@ -149,6 +149,7 @@ export function ScheduleMessagePanel({ contactId, libraryItem, opportunityId, on
   const [uploading, setUploading] = useState(false)
   const [attachError, setAttachError] = useState<string | null>(null)
   const [waitingForRecording, setWaitingForRecording] = useState(false)
+  const audioRequestIdRef = useRef<string | null>(null)
   const photoVideoInputRef = useRef<HTMLInputElement>(null)
   const documentInputRef = useRef<HTMLInputElement>(null)
 
@@ -223,9 +224,11 @@ export function ScheduleMessagePanel({ contactId, libraryItem, opportunityId, on
   }
 
   function handleOpenRecorderTab() {
+    const requestId = `voe-audio-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    audioRequestIdRef.current = requestId
     setAttachError(null)
     setWaitingForRecording(true)
-    chrome.tabs.create({ url: chrome.runtime.getURL('sidebar/index.html?mode=recorder') })
+    chrome.tabs.create({ url: chrome.runtime.getURL(`sidebar/index.html?mode=recorder&requestId=${requestId}`) })
   }
 
   // Escuta o áudio gravado na aba avulsa (StandaloneRecorderPage.tsx) —

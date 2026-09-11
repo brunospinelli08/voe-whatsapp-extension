@@ -1,9 +1,6 @@
-// usePipelines.ts
-// Funis (pipelines) do workspace, cada um com suas etapas — GET /api/v1/pipelines.
-// Usado pro seletor de Funil (chips) + Etapa do formulário de Nova Oportunidade.
-
 import { useEffect, useState } from 'react'
 import { voeApi } from '../lib/apiClient'
+import { cachedFetch } from '../lib/configCache'
 
 export interface PipelineStageOption {
   id: string
@@ -24,9 +21,8 @@ export function usePipelines() {
 
   useEffect(() => {
     let mounted = true
-    voeApi
-      .get<{ data: PipelineOption[] }>('/api/v1/pipelines')
-      .then(res => { if (mounted) setPipelines(res.data) })
+    cachedFetch('pipelines', () => voeApi.get<{ data: PipelineOption[] }>('/api/v1/pipelines').then(r => r.data))
+      .then(data => { if (mounted) setPipelines(data) })
       .catch(() => { if (mounted) setPipelines([]) })
       .finally(() => { if (mounted) setLoading(false) })
     return () => { mounted = false }

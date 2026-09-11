@@ -17,6 +17,7 @@
 import { FormEvent, useEffect, useState } from 'react'
 import type { ActiveChat } from '../hooks/useActiveChat'
 import { voeApi } from '../lib/apiClient'
+import { normalizeToE164 } from '../lib/phoneUtils'
 import { supabase } from '../lib/supabaseClient'
 import { useOriginOptions } from '../hooks/useOriginOptions'
 import { useCampaignOptions } from '../hooks/useCampaignOptions'
@@ -146,6 +147,7 @@ export function CreateOpportunityForm({ chat, existingContactId, onCreated, onCa
         const { data: contact } = await voeApi.post<{ data: { id: string } }>('/api/v1/contacts', {
           name: name.trim() || chat.phone,
           phone: chat.phone,
+          phone_e164: normalizeToE164(chat.phone),
           dedupe: true,
         })
         contactId = contact.id

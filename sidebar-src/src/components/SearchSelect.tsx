@@ -1,9 +1,6 @@
 // SearchSelect.tsx
 // Campo de busca-e-selecione genérico (empresa/contato existente) — digita,
 // espera um instante (debounce) e busca no servidor via `fetchItems`.
-// Mais simples que o equivalente do dashboard (sem dropdown flutuante
-// posicionado por coordenadas — não faz sentido numa sidebar estreita),
-// mas o comportamento é o mesmo: busca, lista, seleciona.
 
 import { useEffect, useRef, useState } from 'react'
 
@@ -29,15 +26,28 @@ export function SearchSelect({ fetchItems, onSelect, placeholder, selected }: Pr
     if (debounceRef.current) clearTimeout(debounceRef.current)
     if (!query.trim()) {
       setResults([])
+      setSearching(false)
       return
     }
     setSearching(true)
+
+    let cancelled = false
+
     debounceRef.current = setTimeout(() => {
       fetchItems(query.trim())
-        .then(setResults)
-        .finally(() => setSearching(false))
+        .then(items => {
+          if (!cancelled) setResults(items)
+        })
+        .catch(() => {
+          if (!cancelled) setResults([])
+        })
+        .finally(() => {
+          if (!cancelled) setSearching(false)
+        })
     }, 300)
+
     return () => {
+      cancelled = true
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
   }, [query, fetchItems])

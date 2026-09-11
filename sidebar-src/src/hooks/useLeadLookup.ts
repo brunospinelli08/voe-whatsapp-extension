@@ -1,17 +1,12 @@
 // useLeadLookup.ts
 // Dado um telefone (do chat ativo do WhatsApp), busca o contato e a
-// oportunidade (lead) correspondentes em /api/v1/*.
-//
-// Limitação conhecida: /api/v1/opportunities não tem filtro por telefone
-// nem por contact_id — só por nome (search), status, stage_id, pipeline_id.
-// Pra achar a oportunidade vinculada a um contato, buscamos a lista (mais
-// recentes primeiro) e filtramos no cliente pelo id do contato já embutido
-// em cada item (opp.contacts[].id). Funciona bem pro volume atual (extensão
-// em teste com número pessoal), mas não escala pra workspaces com muitas
-// oportunidades — candidato a um filtro `contact_id=` no backend no futuro.
+// oportunidade em uma unica chamada via GET /api/v1/lead-context?phone=X.
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { voeApi } from '../lib/apiClient'
+import { normalizeToE164 } from '../lib/phoneUtils'
+import { getLeadFromCache, setLeadInCache, invalidateLeadCache } from '../lib/leadCache'
+import { invalidateCacheByPrefix } from '../lib/configCache'
 
 export interface LeadContact {
   id: string
@@ -19,15 +14,9 @@ export interface LeadContact {
   phone: string | null
   phone_e164: string | null
   email: string | null
-  /** GET /api/v1/contacts?search= já retorna a linha inteira (select("*")) — só faltava tipar. */
   tags?: string[] | null
   contact_type?: 'lead' | 'cliente' | 'parceiro' | 'fornecedor' | 'outro' | null
-  /** "Cargo" no header do ContextPanel real. */
   role_title?: string | null
-  /** Empresa vinculada — `company_id` já vinha em qualquer `select("*")`;
-   * o objeto `company` (nome) precisou de um join novo em
-   * GET/PUT /api/v1/contacts (app.voeops.com), igual ao que fizemos com
-   * segment_data/unit_id nas oportunidades. */
   company_id?: string | null
   company?: { id: string; name: string } | null
 }
@@ -41,26 +30,29 @@ export interface LeadOpportunity {
   pipeline?: { id: string; name: string } | null
   lost_reason: string | null
   contacts: LeadContact[]
-  /** Já vem prontos na resposta de GET /api/v1/opportunities — só precisou */
-  /** ser adicionado ao tipo aqui, nenhuma rota nova pra isso. */
   total_value?: number
   company?: { id: string; name: string } | null
   owner?: { id: string; name: string } | null
-  /** Só populado quando o workspace tem Lead Scoring ativo (ver useLeadScoringConfig). */
   lead_score?: number | null
+}
+
+interface LeadContextResponse {
+  contact: LeadContact | null
+  opportunities: LeadOpportunity[]
 }
 
 interface LeadLookupState {
   loading: boolean
+  revalidating: boolean
   error: string | null
   contact: LeadContact | null
   opportunity: LeadOpportunity | null
-  /** true depois da primeira busca concluída (mesmo sem resultado) */
   searched: boolean
 }
 
 const initialState: LeadLookupState = {
   loading: false,
+  revalidating: false,
   error: null,
   contact: null,
   opportunity: null,
@@ -69,33 +61,51 @@ const initialState: LeadLookupState = {
 
 export function useLeadLookup(phone: string | null) {
   const [state, setState] = useState<LeadLookupState>(initialState)
+  const mountedRef = useRef(true)
+  const phoneRef = useRef(phone)
+  phoneRef.current = phone
 
-  const lookup = useCallback(async (searchPhone: string) => {
-    setState(s => ({ ...s, loading: true, error: null }))
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
+
+  const lookup = useCallback(async (searchPhone: string, isRefetch: boolean) => {
+    if (isRefetch) {
+      setState(s => ({ ...s, revalidating: true, error: null }))
+    } else {
+      setState(s => ({ ...s, loading: true, error: null }))
+    }
+
     try {
-      const contactsRes = await voeApi.get<{ data: LeadContact[] }>(
-        `/api/v1/contacts?search=${encodeURIComponent(searchPhone)}`,
+      const normalized = normalizeToE164(searchPhone)
+      const searchTerm = normalized ?? searchPhone
+
+      // Uma unica chamada retorna contato + oportunidades vinculadas
+      const res = await voeApi.get<LeadContextResponse>(
+        `/api/v1/lead-context?phone=${encodeURIComponent(searchTerm)}`,
       )
-      const contact = contactsRes.data[0] ?? null
+      if (!mountedRef.current) return
 
-      let opportunity: LeadOpportunity | null = null
-      if (contact) {
-        const oppsRes = await voeApi.get<{ data: LeadOpportunity[] }>(
-          `/api/v1/opportunities?status=active&limit=500`,
-        )
-        opportunity =
-          oppsRes.data.find(opp => opp.contacts.some(c => c.id === contact.id)) ?? null
-      }
+      const contact = res.contact
+      // Prioriza oportunidade ativa; se nao houver, pega a mais recente
+      const opportunity = res.opportunities.find(o => o.status === 'active')
+        ?? res.opportunities[0]
+        ?? null
 
-      setState({ loading: false, error: null, contact, opportunity, searched: true })
+      setLeadInCache(searchPhone, contact, opportunity)
+      setState({ loading: false, revalidating: false, error: null, contact, opportunity, searched: true })
     } catch (err) {
-      setState({
+      if (!mountedRef.current) return
+      setState(s => ({
+        ...(isRefetch ? s : {}),
         loading: false,
+        revalidating: false,
         error: err instanceof Error ? err.message : 'Erro ao buscar lead',
-        contact: null,
-        opportunity: null,
+        contact: isRefetch ? s.contact : null,
+        opportunity: isRefetch ? s.opportunity : null,
         searched: true,
-      })
+      }))
     }
   }, [])
 
@@ -104,12 +114,47 @@ export function useLeadLookup(phone: string | null) {
       setState(initialState)
       return
     }
-    lookup(phone)
+
+    const cached = getLeadFromCache(phone)
+    if (cached) {
+      setState({
+        loading: false,
+        revalidating: true,
+        error: null,
+        contact: cached.contact,
+        opportunity: cached.opportunity,
+        searched: true,
+      })
+      lookup(phone, true)
+    } else {
+      lookup(phone, false)
+    }
   }, [phone, lookup])
 
   const refetch = useCallback(() => {
-    if (phone) lookup(phone)
+    if (phone) lookup(phone, true)
   }, [phone, lookup])
 
-  return { ...state, refetch }
+  const invalidateAndRefetch = useCallback(() => {
+    if (phone) {
+      invalidateLeadCache(phone)
+      if (state.opportunity) {
+        invalidateCacheByPrefix(`opp-detail:${state.opportunity.id}`)
+      }
+    }
+    refetch()
+  }, [phone, state.opportunity, refetch])
+
+  // Revalidar ao recuperar foco
+  useEffect(() => {
+    function handleVisibility() {
+      if (document.visibilityState === 'visible' && phoneRef.current) {
+        lookup(phoneRef.current, true)
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [lookup])
+
+  return { ...state, refetch, invalidateAndRefetch }
 }

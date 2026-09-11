@@ -1,8 +1,6 @@
-// useWorkspaceUsers.ts
-// Usuários do workspace pro seletor de "Responsável" — GET /api/v1/workspace-users.
-
 import { useEffect, useState } from 'react'
 import { voeApi } from '../lib/apiClient'
+import { cachedFetch } from '../lib/configCache'
 
 export interface WorkspaceUser {
   id: string
@@ -15,9 +13,8 @@ export function useWorkspaceUsers() {
 
   useEffect(() => {
     let mounted = true
-    voeApi
-      .get<{ data: WorkspaceUser[] }>('/api/v1/workspace-users')
-      .then(res => { if (mounted) setUsers(res.data) })
+    cachedFetch('workspace-users', () => voeApi.get<{ data: WorkspaceUser[] }>('/api/v1/workspace-users').then(r => r.data))
+      .then(data => { if (mounted) setUsers(data) })
       .catch(() => { if (mounted) setUsers([]) })
       .finally(() => { if (mounted) setLoading(false) })
     return () => { mounted = false }

@@ -1,23 +1,6 @@
 // pasteIntoChat.ts
-// "Colar na conversa" — ponte pra levar o conteúdo de um item da Central de
-// Mensagens até a caixa de digitar do WhatsApp Web de verdade (não é um
-// envio automático: só preenche a caixa, igual a um Ctrl+V, e quem manda é
-// o próprio usuário clicando o botão de enviar do WhatsApp).
-//
-// Por que passa por 3 contextos:
-// 1. Sidebar (aqui) — roda num iframe cross-origin (chrome-extension://
-//    dentro de web.whatsapp.com). Não tem acesso ao DOM da página real.
-// 2. background.js — busca o arquivo de mídia (a sidebar não tem bypass de
-//    CORS pro Storage do Supabase, mesmo motivo de backgroundFetch.ts) e
-//    devolve em base64.
-// 3. content.js — roda no mundo isolado da extensão, mas COM acesso ao DOM
-//    real do WhatsApp Web. É quem de fato acha a caixa de mensagem e
-//    dispara o evento de colar.
-//
-// A ida sidebar -> content.js é via window.parent.postMessage (o iframe
-// falando com a página que o hospeda) — mesmo canal que já existe no
-// sentido inverso (content.js -> sidebar) pra WHATSAPP_EVENT, ver
-// useActiveChat.ts.
+// "Colar na conversa" — ponte sidebar -> content.js -> DOM do WhatsApp Web.
+// Não é envio automático: só preenche a caixa (como um Ctrl+V).
 
 import { sendMessageWithTimeout } from './backgroundFetch'
 
@@ -31,10 +14,6 @@ interface FetchMediaResult {
 }
 
 async function fetchMediaBase64(url: string): Promise<{ base64: string; contentType: string }> {
-  // Mesmo helper com timeout de backgroundFetch.ts — sem isso, um
-  // background.js suspenso no meio da busca deixaria "Colar na conversa"
-  // travado pra sempre em vez de virar um erro visível (mesma classe de bug
-  // já achada no upload de anexo do agendamento).
   const result = await sendMessageWithTimeout<FetchMediaResult>({
     type: 'VOE_FETCH_MEDIA_BASE64',
     url,
@@ -45,7 +24,6 @@ async function fetchMediaBase64(url: string): Promise<{ base64: string; contentT
   return { base64: result.base64, contentType: result.contentType || 'application/octet-stream' }
 }
 
-/** Espera a resposta de content.js pra UM pedido específico (correlaciona por `id`). */
 function waitForPasteResult(id: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
@@ -78,11 +56,46 @@ export function pasteTextIntoChat(text: string): Promise<void> {
 }
 
 /**
- * Cola um arquivo de mídia (áudio/imagem/vídeo/documento) na caixa de
- * digitar — o WhatsApp reconhece o arquivo colado e abre o preview de envio
- * dele próprio, do mesmo jeito que reconheceria um Ctrl+V manual.
+ * Cola um arquivo de midia na caixa de digitar.
+ * `expectedPhone` e o telefone do chat onde o usuario iniciou a acao —
+ * se o chat ativo mudou durante o download, aborta pra nao colar no
+ * destinatario errado.
  */
-export async function pasteMediaIntoChat(fileUrl: string, fileName: string): Promise<void> {
+export async function pasteMediaIntoChat(
+  fileUrl: string,
+  fileName: string,
+  expectedPhone?: string | null,
+): Promise<void> {
   const { base64, contentType } = await fetchMediaBase64(fileUrl)
+
+  // Verifica se a conversa ativa ainda e a mesma de quando o usuario clicou
+  if (expectedPhone) {
+    const currentChat = await getCurrentChatPhone()
+    if (currentChat && currentChat !== expectedPhone) {
+      throw new Error('A conversa mudou durante o download. Volte ao chat correto e tente novamente.')
+    }
+  }
+
   return sendToContentScript({ kind: 'file', base64, fileName, mimeType: contentType })
+}
+
+/** Pergunta ao content.js qual o telefone do chat ativo agora. */
+function getCurrentChatPhone(): Promise<string | null> {
+  return new Promise(resolve => {
+    const id = `voe-chat-check-${Date.now()}`
+    const timeout = setTimeout(() => {
+      window.removeEventListener('message', handler)
+      resolve(null) // se nao responder, nao bloqueia — segue sem verificacao
+    }, 2000)
+
+    function handler(event: MessageEvent) {
+      if (event.data?.type !== 'VOE_CURRENT_CHAT_RESULT' || event.data.id !== id) return
+      clearTimeout(timeout)
+      window.removeEventListener('message', handler)
+      resolve(event.data.phone ?? null)
+    }
+
+    window.addEventListener('message', handler)
+    window.parent.postMessage({ type: 'VOE_GET_CURRENT_CHAT', id }, '*')
+  })
 }

@@ -1,10 +1,6 @@
-// useLeadScoringConfig.ts
-// Diz se o Lead Score deve aparecer (feature de plano Scale/Enterprise —
-// GET /api/v1/lead-scoring-config já resolve o gate de plano + a config do
-// workspace) e as faixas de temperatura configuradas.
-
 import { useEffect, useState } from 'react'
 import { voeApi } from '../lib/apiClient'
+import { cachedFetch } from '../lib/configCache'
 
 export interface ScoreBand {
   min: number
@@ -20,16 +16,15 @@ export function useLeadScoringConfig() {
 
   useEffect(() => {
     let mounted = true
-    voeApi
-      .get<{ data: { is_active: boolean; bands: ScoreBand[] } }>('/api/v1/lead-scoring-config')
-      .then(res => {
+    cachedFetch('lead-scoring-config', () =>
+      voeApi.get<{ data: { is_active: boolean; bands: ScoreBand[] } }>('/api/v1/lead-scoring-config').then(r => r.data)
+    )
+      .then(data => {
         if (!mounted) return
-        setIsActive(res.data.is_active)
-        setBands(res.data.bands)
+        setIsActive(data.is_active)
+        setBands(data.bands)
       })
-      .catch(() => {
-        if (mounted) setIsActive(false)
-      })
+      .catch(() => { if (mounted) setIsActive(false) })
       .finally(() => { if (mounted) setLoading(false) })
     return () => { mounted = false }
   }, [])

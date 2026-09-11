@@ -1,16 +1,6 @@
 // useActiveWorkspace.ts
-// Workspace ativo da extensão: lido de chrome.storage.local ao logar (não
-// pede de novo toda vez), com uma função pra trocar — que atualiza o
-// workspace ativo no servidor (users.workspace_id, via
-// POST /api/workspaces/select) e garante um token pra ele antes de
-// persistir a escolha localmente.
-//
-// Recebe `userId` (da sessão do Supabase) e reage a mudanças nele: sem
-// isso, deslogar limpava o storage mas o estado em memória continuava
-// com o workspace antigo — ao logar de novo (mesma sidebar, sem reload),
-// a tela de seleção era pulada por engano e as chamadas à API quebravam
-// com "Nenhum workspace selecionado" (o storage, lido de novo ali dentro,
-// já estava vazio).
+// Workspace ativo da extensão: lido de chrome.storage.local ao logar,
+// com função pra trocar. Limpa caches ao mudar de workspace.
 
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
@@ -21,14 +11,14 @@ import {
   setActiveWorkspace as persistActiveWorkspace,
   clearActiveWorkspace,
 } from '../lib/workspaceStorage'
+import { clearAllCache } from '../lib/configCache'
+import { clearLeadCache } from '../lib/leadCache'
 
 interface UseActiveWorkspaceResult {
   activeWorkspace: ActiveWorkspace | null
   loading: boolean
   error: string | null
-  /** Troca o workspace ativo (persiste local + sincroniza no servidor + garante token). */
   selectWorkspace: (id: string, name: string) => Promise<void>
-  /** Volta pra tela de seleção (não desloga, só esquece a escolha atual). */
   changeWorkspace: () => void
 }
 
@@ -39,8 +29,6 @@ export function useActiveWorkspace(userId: string | null): UseActiveWorkspaceRes
 
   useEffect(() => {
     if (!userId) {
-      // Sem sessão — nada pra carregar, e garante que não sobra workspace
-      // de uma sessão anterior (de outra conta, ou de antes do logout).
       setActiveWorkspaceState(null)
       setLoading(false)
       return
@@ -68,7 +56,11 @@ export function useActiveWorkspace(userId: string | null): UseActiveWorkspaceRes
         if (!accessToken) throw new Error('Sessão expirada, faça login novamente.')
 
         await selectWorkspaceOnServer(accessToken, id)
-        await getVoeToken(accessToken, userId, id) // garante que já existe um token pronto pra esse workspace
+        await getVoeToken(accessToken, userId, id)
+
+        // Limpa caches do workspace anterior
+        clearAllCache()
+        clearLeadCache()
 
         await persistActiveWorkspace(userId, { id, name })
         setActiveWorkspaceState({ id, name })
@@ -82,6 +74,8 @@ export function useActiveWorkspace(userId: string | null): UseActiveWorkspaceRes
 
   const changeWorkspace = useCallback(() => {
     if (userId) clearActiveWorkspace(userId)
+    clearAllCache()
+    clearLeadCache()
     setActiveWorkspaceState(null)
   }, [userId])
 

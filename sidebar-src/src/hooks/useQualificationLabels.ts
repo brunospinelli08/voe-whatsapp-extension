@@ -1,9 +1,6 @@
-// useQualificationLabels.ts
-// Labels de Qualificação por estrela (1 a 5), configuráveis por workspace —
-// GET /api/v1/qualification-labels.
-
 import { useEffect, useState } from 'react'
 import { voeApi } from '../lib/apiClient'
+import { cachedFetch } from '../lib/configCache'
 
 export function useQualificationLabels() {
   const [labels, setLabels] = useState<Record<number, string>>({})
@@ -11,14 +8,14 @@ export function useQualificationLabels() {
 
   useEffect(() => {
     let mounted = true
-    voeApi
-      .get<{ data: { stars: number; label: string }[] }>('/api/v1/qualification-labels')
-      .then(res => {
-        if (!mounted) return
+    cachedFetch('qualification-labels', () =>
+      voeApi.get<{ data: { stars: number; label: string }[] }>('/api/v1/qualification-labels').then(r => {
         const map: Record<number, string> = {}
-        res.data.forEach(l => { map[l.stars] = l.label })
-        setLabels(map)
+        r.data.forEach(l => { map[l.stars] = l.label })
+        return map
       })
+    )
+      .then(data => { if (mounted) setLabels(data) })
       .catch(() => { if (mounted) setLabels({}) })
       .finally(() => { if (mounted) setLoading(false) })
     return () => { mounted = false }

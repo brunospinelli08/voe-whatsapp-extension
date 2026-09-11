@@ -3,6 +3,8 @@ import { useCallback, useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabaseClient'
 import { clearAllWorkspaceData } from '../lib/workspaceStorage'
+import { clearAllCache } from '../lib/configCache'
+import { clearLeadCache } from '../lib/leadCache'
 
 interface UseAuthResult {
   session: Session | null
@@ -41,13 +43,13 @@ export function useAuth(): UseAuthResult {
   }, [])
 
   const signOut = useCallback(async () => {
-    // Captura o userId ANTES do signOut — depois disso session vira null e
-    // a gente perde a referência de qual storage limpar.
     const { data: sessionData } = await supabase.auth.getSession()
     const userId = sessionData.session?.user.id
 
     await supabase.auth.signOut()
     if (userId) await clearAllWorkspaceData(userId)
+    clearAllCache()
+    clearLeadCache()
   }, [])
 
   return { session, loading, signIn, signOut }

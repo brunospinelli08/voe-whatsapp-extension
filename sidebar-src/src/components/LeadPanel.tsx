@@ -32,7 +32,7 @@ type LeadAction = 'new-opportunity' | 'new-contact' | 'link-opportunity' | null
 type PanelTab = 'contexto' | 'atividades'
 
 export function LeadPanel({ chat, workspaceId, onContactContextChange }: Props) {
-  const { loading, error, contact, opportunity, searched, refetch } = useLeadLookup(chat.phone)
+  const { loading, error, contact, opportunity, searched, refetch, invalidateAndRefetch } = useLeadLookup(chat.phone)
   const [action, setAction] = useState<LeadAction>(null)
   const [tab, setTab] = useState<PanelTab>('contexto')
   const [messageCenterOpen, setMessageCenterOpen] = useState(false)
@@ -45,7 +45,7 @@ export function LeadPanel({ chat, workspaceId, onContactContextChange }: Props) 
 
   function handleDone() {
     setAction(null)
-    refetch()
+    invalidateAndRefetch()
   }
 
   const isLead = contact?.contact_type === 'lead'
