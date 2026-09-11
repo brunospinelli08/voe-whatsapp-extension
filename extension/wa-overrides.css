@@ -43,6 +43,16 @@ body {
 #voe-sidebar-frame { background: hsl(0 0% 100%); color-scheme: light; }
 #voe-sidebar-frame[data-voe-theme='dark'] { background: hsl(220 12% 15%); color-scheme: dark; }
 
+#voe-message-center-frame {
+  position: fixed;
+  z-index: 9998;
+  border: 0;
+  background: transparent;
+  color-scheme: light;
+}
+#voe-message-center-frame[hidden] { display: none; }
+#voe-message-center-frame[data-voe-theme='dark'] { color-scheme: dark; }
+
 @media (prefers-reduced-motion: reduce) {
   #voe-sidebar-toggle { transition: none; }
 }

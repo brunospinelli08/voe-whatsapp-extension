@@ -21,24 +21,25 @@ import { AlertIcon, BriefcaseIcon, ChevronLeftIcon, LinkIcon, PlusIcon, UserIcon
 interface Props {
   chat: ActiveChat
   workspaceId: string
+  userId: string
   /** Reporta o contato ativo (e um jeito de recarregá-lo) pro App.tsx, que
    * alimenta o menu "•••" no header — as ações desse menu (editar contato,
    * empresa) são do contato, mas o botão em si mora no header do app, um
    * nível acima de onde o lookup acontece. */
-  onContactContextChange?: (ctx: { contact: LeadContact; refetch: () => void } | null) => void
+  onContactContextChange?: (ctx: { contact: LeadContact; chatPhone: string; workspaceId: string; userId: string; refetch: () => void } | null) => void
 }
 
 type LeadAction = 'new-opportunity' | 'new-contact' | 'link-opportunity' | null
 type PanelTab = 'contexto' | 'atividades'
 
-export function LeadPanel({ chat, workspaceId, onContactContextChange }: Props) {
+export function LeadPanel({ chat, userId, workspaceId, onContactContextChange }: Props) {
   const { loading, error, contact, opportunity, searched, refetch, invalidateAndRefetch } = useLeadLookup(chat.phone)
   const [action, setAction] = useState<LeadAction>(null)
   const [tab, setTab] = useState<PanelTab>('contexto')
   const [messageCenterOpen, setMessageCenterOpen] = useState(false)
 
   useEffect(() => {
-    onContactContextChange?.(contact ? { contact, refetch } : null)
+    onContactContextChange?.(contact ? { contact, chatPhone: chat.phone, workspaceId, userId, refetch } : null)
     return () => onContactContextChange?.(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contact, refetch])
@@ -61,11 +62,12 @@ export function LeadPanel({ chat, workspaceId, onContactContextChange }: Props) 
   // não precisa de contato nem oportunidade, só do chat ativo — dá pra abrir
   // até antes do lookup terminar.
   if (messageCenterOpen) {
-    return <MessageCenterScreen chatName={chat.name} chatPhone={chat.phone} onClose={() => setMessageCenterOpen(false)} />
+    return <MessageCenterScreen context={{ scope: { userId, workspaceId }, chat, contact }} onClose={() => setMessageCenterOpen(false)} />
   }
 
   return (
     <div className="lead-panel">
+      <MessageCenterToggle onClick={() => setMessageCenterOpen(true)} />
       {showWhatsAppIdentity && <header className="active-chat-header">
         <div className="active-chat-header-top">
           <span className="block-title">WhatsApp</span>
@@ -90,7 +92,6 @@ export function LeadPanel({ chat, workspaceId, onContactContextChange }: Props) 
               chat (mesmo sem oportunidade vinculada, pedido explícito: ela
               não depende de oportunidade, só do chat ativo). Abre em tela
               cheia (ver early return acima). ── */}
-          <MessageCenterToggle onClick={() => setMessageCenterOpen(true)} />
 
           {/* ── Tabs: Contexto | Atividades ── */}
           <div className="panel-tabs">

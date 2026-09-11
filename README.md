@@ -10,6 +10,94 @@
 Após atualizar, recarregue a extensão em `chrome://extensions` e atualize
 a aba do WhatsApp Web para carregar os scripts novos.
 
+## Central de Mensagens — experiência junto da conversa
+
+- Barra compacta acima da digitação: Texto, Áudio, Imagem, Vídeo, Documento e Mais.
+- Painel com altura limitada, mantendo as informações do contato na sidebar.
+- A barra reserva espaço no histórico mesmo nos layouts com rodapé flutuante, preservando a última mensagem e a posição de leitura.
+- O acesso pela sidebar continua disponível, inclusive quando não encontramos a caixa de digitação.
+- Busca por múltiplos termos sem depender de acentos, cobrindo título, conteúdo, arquivo, categoria e tags recebidas pela API.
+- Filtros por temas em cápsulas com seleção múltipla, usando os nomes e a ordem configurados no workspace no Inbox; favoritas e recentes continuam disponíveis.
+- Temas e nomes das tags são lidos com a sessão autenticada e RLS, seguindo o padrão de leitura de configurações da extensão. Nenhuma categoria é criada automaticamente.
+- Busca, filtros e posição da lista são preservados por usuário/workspace durante a sessão e compartilhados entre os dois acessos.
+- Variáveis de contato são resolvidas antes de inserir; valores ausentes aparecem destacados na prévia.
+- Texto completo e prévias de imagem, áudio, vídeo, documento e carrossel ao expandir um item. Mídias não são pré-carregadas na lista.
+- A biblioteca usa cache de sessão por usuário/workspace, com validade de 1 minuto, atualização em segundo plano ao reabrir/focar e atualização manual.
+
+**Inserir** preserva o rascunho de texto existente; o texto é enviado pelo botão do WhatsApp.
+Imagem, vídeo e documento oferecem revisão na Central, legenda editável e **Confirmar envio**.
+Áudio tem **Enviar áudio** direto, sem exigir reprodução prévia. O envio usa mensagem de voz
+(`isPtt: true`, `waveform: true`), com o formato visual do áudio gravado no WhatsApp.
+Mídias são enviadas pelo bridge WA-JS como `File`, reconstruído do base64 no contexto
+da página. Isso evita o parser de data URLs da biblioteca, que rejeita o MIME com
+espaço `audio/ogg; codecs=opus`. A colagem sintética de arquivos foi removida.
+Links assinados ainda válidos são reutilizados. Links antigos são renovados por
+`GET /api/v1/message-library/:id/media-url`, com o mesmo Bearer de workspace da biblioteca
+e renovação única do token em 401 pelo `apiClient`. A rota busca o modelo ativo pelo ID e
+workspace do token, valida a origem/bucket/caminho salvo e assina por uma hora no servidor.
+O cliente não envia caminho, bucket ou workspace arbitrários para assinatura. A extensão não
+chama `createSignedUrl` no navegador nem depende do workspace ativo no perfil do Inbox para
+renovar mídia. Negativas de acesso continuam respeitadas; nenhuma permissão/RLS foi ampliada.
+**Publicação:** esta renovação exige publicar a nova rota do app na **Vercel** antes de
+distribuir a extensão atualizada. Não exige alterações na VPS nem no banco de dados.
+A conversa é confirmada antes do download e no instante do envio. Trocar de conversa/workspace
+cancela a preparação. Após o envio começar, o destinatário fica fixo; não há repetição automática
+em falhas ou ausência de confirmação. Nesses casos, a interface orienta conferir a conversa.
+A reserva inferior fica apenas no histórico rolável: não inserimos espaçadores entre os elementos
+nativos, evitando a faixa sob o cabeçalho nos layouts que usam `order` no flex.
+Coleções pessoais sincronizadas, agendamento pela Central e envio de carrossel continuam fora desta etapa.
+
+### Validação local da Central
+
+`scripts/check-message-center.cjs` executa os componentes reais, o content script e o bridge em uma página em localhost com WhatsApp/API simulados. Requisições externas são bloqueadas.
+
+```bash
+cd sidebar-src
+npm run build
+cd ..
+node scripts/check-message-center.cjs
+```
+
+O teste requer `puppeteer-core` disponível no ambiente. Para reutilizar uma instalação existente, defina `PUPPETEER_MODULE` com o caminho do módulo e, se necessário, `CHROME_PATH` com o executável do Chrome.
+Cobre busca/variáveis, rascunho, cache, rolagem, recentes, prévias, troca de chat durante download, ausência de identidade confirmada, falhas/retry, temas, teclado, sidebar estreita e isolamento entre workspaces.
+As capturas de validação são gravadas em `/tmp/voe-message-center-*.png`.
+
+### Ondas da mensagem de voz
+
+O player do Inbox desenha barras fixas (`FAKE_WAVEFORM` em `inbox/page.tsx`). O envio via
+Evolution Go usa `/send/media` com `type: "audio"`; o app não transmite essas barras do player.
+As gravações do Inbox passam por `audioConvert.ts` (OGG/Opus). Além disso, o próprio
+[servidor Evolution Go](https://github.com/evolution-foundation/evolution-go/blob/main/pkg/sendMessage/service/send_service.go)
+converte o arquivo para OGG/Opus (mono, 48 kHz, 128 kbps) e monta `AudioMessage` com
+`PTT: true`, MIME explícito, duração e uma waveform fixa. Isso explica as ondas também
+no WhatsApp destinatário, independentemente das barras do player do Inbox. A fonte consultada
+é o código público; não foi acessada nem alterada a versão executada na VPS.
+
+O WA-JS 4.6.0 calcula 64 barras com Web Audio e passa `precomputedFields` ao preparo nativo.
+A extensão inclui uma correção localizada em `extension/wppconnect-wa.js`: depois de preparar
+o áudio PTT, preserva a waveform existente ou reaplica a calculada em `mediaData.waveform`
+e no objeto final `productMsgOptions`. Antes do envio, a extensão converte o arquivo para OGG/Opus mono, 48 kHz, 128 kbps,
+com MIME `audio/ogg; codecs=opus`. O muxer local foi adaptado de `audioConvert.ts` do app,
+com Web Audio + WebCodecs; nenhuma chamada ao Evolution Go é necessária. A preparação
+pode ser cancelada ao trocar de conversa e falha antes do envio se o arquivo não puder ser
+decodificado ou o navegador não suportar Opus.
+Referência para a aplicação após o preparo: [whatsapp-web.js, processMediaData](https://github.com/pedroslopez/whatsapp-web.js/blob/main/src/util/Injected/Utils.js).
+
+`node scripts/patch-wa-js-audio.cjs` aplica a correção de forma idempotente, com validação
+da versão e da âncora. Ao substituir/atualizar o vendor, revisar essa adaptação e executar
+`node scripts/check-audio-waveform.cjs` (mesmos `PUPPETEER_MODULE` e `CHROME_PATH` acima).
+O teste converte WAV válido em OGG/Opus com o código real da extensão, confirma a reprodução
+por decodificação, mono, duração, cancelamento e rejeição de arquivo inválido. Executa as
+funções reais do vendor para calcular ondas do OGG com Web Audio do Chrome. Simula
+um preparo nativo que ignora `precomputedFields`, comprova a perda antes da correção e
+verifica as ondas na mídia e no objeto final depois dela. Também preserva ondas nativas
+e deixa áudio comum/imagem sem alteração. O comportamento do WhatsApp real continua
+dependente de validação manual; a simulação não comprova a exibição no destinatário.
+
+Os ajustes de conversão/ondas rodam no pacote da extensão, incluindo o build de `sidebar/`.
+A release 1.2.0 também depende da nova rota de renovação de mídia na Vercel, descrita acima.
+A integração foi validada com simulação local; mudanças no DOM do WhatsApp podem exigir ajuste dos seletores.
+
 ## Tema da extensão
 
 Use o botão de lua/sol no cabeçalho para alternar entre claro e escuro.
@@ -294,7 +382,7 @@ validação ao vivo depois de escritos.
         `.minha-classe:hover:not(:disabled)`) pra igualar/superar a especificidade da regra
         global, mesmo quando o elemento nunca fica de fato disabled. Vale pra qualquer botão novo
         na extensão daqui pra frente, não só a Central de Mensagens.
-      - **"Colar na conversa"** (pedido explícito, no lugar do par Inserir/Enviar do real — ver
+      - **Histórico da implementação inicial (substituído pelo fluxo atual descrito no início): "Colar na conversa"** (pedido explícito, no lugar do par Inserir/Enviar do real — ver
         `pasteIntoChat.ts`) — preenche a caixa de digitar do WhatsApp Web de verdade (texto) ou
         simula um Ctrl+V de arquivo nela (mídia), sempre deixando o envio de fato pro clique do
         próprio usuário; nunca envia sozinho. Só carrossel fica sem essa ação (é um formato

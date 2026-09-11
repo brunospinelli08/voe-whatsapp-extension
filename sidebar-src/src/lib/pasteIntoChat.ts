@@ -1,101 +1,64 @@
-// pasteIntoChat.ts
-// "Colar na conversa" — ponte sidebar -> content.js -> DOM do WhatsApp Web.
-// Não é envio automático: só preenche a caixa (como um Ctrl+V).
-
 import { sendMessageWithTimeout } from './backgroundFetch'
+import { base64ToFile, fileToBase64 } from './fileBase64'
+import { prepareVoiceAudio } from './voiceAudio'
+import type { ApiScope } from './apiClient'
 
-const PASTE_TIMEOUT_MS = 15_000
+interface FetchMediaResult { ok: boolean; base64?: string; contentType?: string; error?: string }
+export interface PasteResult { confirmed: boolean }
+interface ChatResult { phone: string | null; revision: number }
 
-interface FetchMediaResult {
-  ok: boolean
-  base64?: string
-  contentType?: string
-  error?: string
-}
-
-async function fetchMediaBase64(url: string): Promise<{ base64: string; contentType: string }> {
-  const result = await sendMessageWithTimeout<FetchMediaResult>({
-    type: 'VOE_FETCH_MEDIA_BASE64',
-    url,
-  })
-  if (!result?.ok || !result.base64) {
-    throw new Error(result?.error || 'Erro ao baixar o arquivo pra colar na conversa')
-  }
-  return { base64: result.base64, contentType: result.contentType || 'application/octet-stream' }
-}
-
-function waitForPasteResult(id: string): Promise<void> {
+function requestParent<T>(type: string, replyType: string, payload?: Record<string, unknown>, timeoutMs = 8000): Promise<T> {
   return new Promise((resolve, reject) => {
+    const id = `voe-${Date.now()}-${Math.random().toString(36).slice(2)}`
     const timeout = setTimeout(() => {
-      window.removeEventListener('message', handleMessage)
-      reject(new Error('O WhatsApp Web não respondeu a tempo. Abra uma conversa e tente de novo.'))
-    }, PASTE_TIMEOUT_MS)
-
-    function handleMessage(event: MessageEvent) {
-      if (event.data?.type !== 'VOE_PASTE_RESULT' || event.data.id !== id) return
+      window.removeEventListener('message', onMessage)
+      reject(new Error(timeoutMs > 8000 ? 'Envio sem confirmação. Confira a conversa antes de tentar novamente.' : 'O WhatsApp não respondeu. Aguarde e tente novamente.'))
+    }, timeoutMs)
+    function onMessage(event: MessageEvent) {
+      if (event.source !== window.parent || event.data?.type !== replyType || event.data.id !== id) return
       clearTimeout(timeout)
-      window.removeEventListener('message', handleMessage)
-      if (event.data.ok) resolve()
-      else reject(new Error(event.data.error || 'Não foi possível colar na conversa'))
+      window.removeEventListener('message', onMessage)
+      if (event.data.ok === false) reject(new Error(event.data.error || 'Não foi possível inserir na conversa.'))
+      else resolve(event.data as T)
     }
-
-    window.addEventListener('message', handleMessage)
+    window.addEventListener('message', onMessage)
+    window.parent.postMessage({ type, id, payload }, '*')
   })
 }
 
-function sendToContentScript(payload: Record<string, unknown>): Promise<void> {
-  const id = `voe-paste-${Date.now()}-${Math.random().toString(36).slice(2)}`
-  const resultPromise = waitForPasteResult(id)
-  window.parent.postMessage({ type: 'VOE_PASTE_INTO_CHAT', id, payload }, '*')
-  return resultPromise
+async function verifyChat(expectedPhone: string): Promise<ChatResult> {
+  const chat = await requestParent<ChatResult>('VOE_GET_CURRENT_CHAT', 'VOE_CURRENT_CHAT_RESULT')
+  if (!expectedPhone || chat.phone !== expectedPhone) throw new Error('A conversa mudou ou não pôde ser confirmada. Abra o contato correto e tente novamente.')
+  return chat
 }
 
-/** Cola texto puro na caixa de digitar do chat ativo. */
-export function pasteTextIntoChat(text: string): Promise<void> {
-  return sendToContentScript({ kind: 'text', text })
+/** Insere sem substituir o rascunho; o envio final continua no WhatsApp. */
+export async function pasteTextIntoChat(text: string, expectedPhone: string, scope?: ApiScope, signal?: AbortSignal): Promise<PasteResult> {
+  if (!text.trim()) throw new Error('Este modelo não tem texto para inserir.')
+  const chat = await verifyChat(expectedPhone)
+  signal?.throwIfAborted()
+  return requestParent('VOE_PASTE_INTO_CHAT', 'VOE_PASTE_RESULT', { kind: 'text', text, expectedPhone, revision: chat.revision, scope })
 }
 
-/**
- * Cola um arquivo de midia na caixa de digitar.
- * `expectedPhone` e o telefone do chat onde o usuario iniciou a acao —
- * se o chat ativo mudou durante o download, aborta pra nao colar no
- * destinatario errado.
- */
-export async function pasteMediaIntoChat(
-  fileUrl: string,
-  fileName: string,
-  expectedPhone?: string | null,
-): Promise<void> {
-  const { base64, contentType } = await fetchMediaBase64(fileUrl)
-
-  // Verifica se a conversa ativa ainda e a mesma de quando o usuario clicou
-  if (expectedPhone) {
-    const currentChat = await getCurrentChatPhone()
-    if (currentChat && currentChat !== expectedPhone) {
-      throw new Error('A conversa mudou durante o download. Volte ao chat correto e tente novamente.')
-    }
+/** Confere a conversa antes do download e novamente no instante do envio. */
+export async function sendMediaIntoChat(fileUrl: string, fileName: string, mediaType: string, caption: string, expectedPhone: string, scope: ApiScope, signal?: AbortSignal): Promise<PasteResult> {
+  const chat = await verifyChat(expectedPhone)
+  signal?.throwIfAborted()
+  const result = await sendMessageWithTimeout<FetchMediaResult>({ type: 'VOE_FETCH_MEDIA_BASE64', url: fileUrl })
+  signal?.throwIfAborted()
+  if (!result?.ok || !result.base64) throw new Error(result?.error || 'Erro ao preparar o arquivo. Tente atualizar a biblioteca.')
+  let base64 = result.base64
+  let mimeType = result.contentType || 'application/octet-stream'
+  if (mediaType === 'audio') {
+    const voice = await prepareVoiceAudio(base64ToFile(base64, fileName, mimeType), signal)
+    signal?.throwIfAborted()
+    base64 = await fileToBase64(voice)
+    mimeType = voice.type
+    fileName = `${fileName.replace(/\.[^.]+$/, '') || 'audio'}.ogg`
   }
-
-  return sendToContentScript({ kind: 'file', base64, fileName, mimeType: contentType })
-}
-
-/** Pergunta ao content.js qual o telefone do chat ativo agora. */
-function getCurrentChatPhone(): Promise<string | null> {
-  return new Promise(resolve => {
-    const id = `voe-chat-check-${Date.now()}`
-    const timeout = setTimeout(() => {
-      window.removeEventListener('message', handler)
-      resolve(null) // se nao responder, nao bloqueia — segue sem verificacao
-    }, 2000)
-
-    function handler(event: MessageEvent) {
-      if (event.data?.type !== 'VOE_CURRENT_CHAT_RESULT' || event.data.id !== id) return
-      clearTimeout(timeout)
-      window.removeEventListener('message', handler)
-      resolve(event.data.phone ?? null)
-    }
-
-    window.addEventListener('message', handler)
-    window.parent.postMessage({ type: 'VOE_GET_CURRENT_CHAT', id }, '*')
-  })
+  signal?.throwIfAborted()
+  return requestParent('VOE_PASTE_INTO_CHAT', 'VOE_PASTE_RESULT', {
+    kind: 'file', base64, fileName, mimeType,
+    expectedPhone, revision: chat.revision, scope, mediaType, caption,
+  }, 95000)
 }

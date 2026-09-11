@@ -5,15 +5,26 @@
 
 const SIDEBAR_WIDTH = 340
 const COLLAPSED_WIDTH = 36
+const CENTER_BAR_HEIGHT = 36
+const CENTER_BAR_GAP = 6
+const CENTER_RESERVED_HEIGHT = CENTER_BAR_HEIGHT + CENTER_BAR_GAP
 
 let lastReportedChat = null
 let sidebarCollapsed = false
 let extensionTheme = 'light'
+let centerContext = null
+let centerOpen = false
+let chatRevision = 0
+let centerLayoutPending = false
+let observedFooter = null
+let messageViewport = null
+let messageViewportStyle = null
+const centerResizeObserver = new ResizeObserver(() => scheduleCenterLayout())
 
 // Tema próprio da extensão: nunca altera o tema da página do WhatsApp.
 function applyExtensionTheme(value) {
   extensionTheme = value === 'dark' ? 'dark' : 'light'
-  for (const id of ['voe-sidebar-toggle', 'voe-sidebar-frame']) {
+  for (const id of ['voe-sidebar-toggle', 'voe-sidebar-frame', 'voe-message-center-frame']) {
     const element = document.getElementById(id)
     if (element) element.dataset.voeTheme = extensionTheme
   }
@@ -65,6 +76,21 @@ async function injectSidebar() {
     transition: width 0.2s ease, opacity 0.2s ease;
   `
   document.body.appendChild(iframe)
+
+  const centerFrame = document.createElement('iframe')
+  centerFrame.id = 'voe-message-center-frame'
+  centerFrame.title = 'Central de Mensagens da Voe'
+  centerFrame.src = `${sidebarUrl}?mode=message-center`
+  centerFrame.hidden = true
+  document.body.appendChild(centerFrame)
+  const observer = new MutationObserver(scheduleCenterLayout)
+  const appRoot = document.getElementById('app')
+  if (appRoot) {
+    observer.observe(appRoot, { childList: true, subtree: true })
+    centerResizeObserver.observe(appRoot)
+  }
+  window.addEventListener('resize', scheduleCenterLayout)
+  window.addEventListener('scroll', scheduleCenterLayout, true)
 
   // ── Botão de colapsar/expandir ──
   const toggleBtn = document.createElement('button')
@@ -132,6 +158,105 @@ function toggleSidebar() {
   }
   toggleBtn.setAttribute('aria-label', toggleBtn.title)
   toggleBtn.setAttribute('aria-expanded', String(!sidebarCollapsed))
+  scheduleCenterLayout()
+}
+
+function restoreMessageViewport() {
+  if (messageViewport && messageViewportStyle) {
+    const { value, priority } = messageViewportStyle
+    if (value) messageViewport.style.setProperty('padding-bottom', value, priority)
+    else messageViewport.style.removeProperty('padding-bottom')
+  }
+  messageViewport = null
+  messageViewportStyle = null
+}
+
+// Alguns layouts do WhatsApp posicionam o histórico independentemente do
+// footer. Compensa apenas a sobreposição
+// real no elemento que rola, sem forçar quem está lendo mensagens antigas ao fim.
+function reserveMessageSpace(footer, barTop) {
+  const main = footer.closest('#main')
+  if (!main) return
+  if (!messageViewport?.isConnected || !main.contains(messageViewport)) {
+    restoreMessageViewport()
+    let bestArea = 0
+    for (const element of main.querySelectorAll('div')) {
+      if (footer.contains(element) || element.contains(footer)) continue
+      if (element.clientHeight < 80 || element.clientWidth < main.clientWidth / 2) continue
+      if (!/^(auto|scroll)$/.test(getComputedStyle(element).overflowY)) continue
+      const area = element.clientWidth * element.clientHeight
+      if (area > bestArea) { messageViewport = element; bestArea = area }
+    }
+    if (!messageViewport) return
+    messageViewportStyle = {
+      value: messageViewport.style.getPropertyValue('padding-bottom'),
+      priority: messageViewport.style.getPropertyPriority('padding-bottom'),
+      base: parseFloat(getComputedStyle(messageViewport).paddingBottom) || 0,
+      reserved: 0,
+    }
+    centerResizeObserver.observe(messageViewport)
+  }
+  const rect = messageViewport.getBoundingClientRect()
+  const overlap = Math.max(0, Math.ceil(rect.bottom - barTop))
+  if (overlap === messageViewportStyle.reserved) return
+  const pinned = messageViewport.scrollHeight - messageViewport.clientHeight - messageViewport.scrollTop <= 48
+  const scrollTop = messageViewport.scrollTop
+  messageViewport.style.setProperty('padding-bottom', `${messageViewportStyle.base + overlap}px`, 'important')
+  messageViewportStyle.reserved = overlap
+  if (pinned) messageViewport.scrollTop = messageViewport.scrollHeight
+  else messageViewport.scrollTop = scrollTop
+}
+
+// Reserva somente no histórico: inserir irmãos no flex do WhatsApp pode criar
+// uma faixa sob o cabeçalho devido à propriedade order dos elementos nativos.
+// O painel expandido continua sobre a conversa, com altura limitada.
+function scheduleCenterLayout() {
+  if (centerLayoutPending) return
+  centerLayoutPending = true
+  requestAnimationFrame(() => {
+    centerLayoutPending = false
+    const frame = document.getElementById('voe-message-center-frame')
+    if (!frame) return
+    const box = findComposeBox()
+    const footer = box?.closest('footer')
+    const usable = centerContext && lastReportedChat?.phone && footer && footer.getClientRects().length
+    if (!usable) {
+      frame.hidden = true
+      restoreMessageViewport()
+      return
+    }
+    if (observedFooter !== footer) {
+      centerResizeObserver.disconnect()
+      centerResizeObserver.observe(footer)
+      if (footer.parentElement) centerResizeObserver.observe(footer.parentElement)
+      if (messageViewport?.isConnected) centerResizeObserver.observe(messageViewport)
+      observedFooter = footer
+    }
+    const rect = footer.getBoundingClientRect()
+    // Alinha a cápsula com a superfície arredondada que contém a digitação,
+    // incluindo seus botões. Sem superfície identificável, usa o recuo do footer.
+    let composerRect = null
+    for (let element = box; element && element !== footer; element = element.parentElement) {
+      const bounds = element.getBoundingClientRect()
+      if (bounds.width >= rect.width / 2 && parseFloat(getComputedStyle(element).borderTopLeftRadius) >= 16) composerRect = bounds
+    }
+    const footerStyle = getComputedStyle(footer)
+    const leftInset = composerRect ? Math.max(0, composerRect.left - rect.left) : Math.max(12, parseFloat(footerStyle.paddingLeft) || 0)
+    const rightInset = composerRect ? Math.max(0, rect.right - composerRect.right) : Math.max(12, parseFloat(footerStyle.paddingRight) || 0)
+    const bottom = rect.top - CENTER_BAR_GAP
+    const main = footer.closest('#main')
+    const chatHeader = main?.querySelector(':scope > header')
+    const upperBoundary = Math.max(64, (chatHeader?.getBoundingClientRect().bottom ?? 56) + 8)
+    const available = Math.max(CENTER_BAR_HEIGHT, bottom - upperBoundary)
+    const height = centerOpen ? Math.min(450, available) : CENTER_BAR_HEIGHT
+    frame.hidden = rect.width < 260 || bottom - upperBoundary < CENTER_BAR_HEIGHT
+    frame.style.left = `${rect.left + leftInset}px`
+    frame.style.top = `${bottom - height}px`
+    frame.style.width = `${Math.max(0, rect.width - leftInset - rightInset)}px`
+    frame.style.height = `${height}px`
+    if (frame.hidden) restoreMessageViewport()
+    else reserveMessageSpace(footer, rect.top - CENTER_RESERVED_HEIGHT)
+  })
 }
 
 function loadStylesheetOverrides() {
@@ -166,7 +291,17 @@ waitForWhatsAppWeb()
 
 // ── Ponte: página real -> content script -> sidebar (iframe) ──
 document.addEventListener('VOE_WHATSAPP_EVENT', event => {
+  if (lastReportedChat?.phone !== event.detail?.phone) {
+    chatRevision++
+    centerOpen = false
+    document.getElementById('voe-message-center-frame')?.contentWindow.postMessage({ type: 'VOE_CENTER_CLOSE' }, '*')
+    if (centerContext) {
+      centerContext = { ...centerContext, chat: event.detail ?? null, contact: null }
+      document.getElementById('voe-message-center-frame')?.contentWindow.postMessage({ type: 'VOE_CENTER_CONTEXT', context: centerContext }, '*')
+    }
+  }
   lastReportedChat = event.detail
+  scheduleCenterLayout()
   const sidebarFrame = document.getElementById('voe-sidebar-frame')
   if (sidebarFrame) {
     sidebarFrame.contentWindow.postMessage(
@@ -196,19 +331,13 @@ const COMPOSE_BOX_SELECTORS = [
 function findComposeBox() {
   for (const selector of COMPOSE_BOX_SELECTORS) {
     const el = document.querySelector(selector)
-    if (el) return el
+    if (el && el.getClientRects().length && el.closest('#main') && el.getAttribute('contenteditable') === 'true') return el
   }
   return null
 }
 
-function base64ToFile(base64, fileName, mimeType) {
-  const byteChars = atob(base64)
-  const bytes = new Uint8Array(byteChars.length)
-  for (let i = 0; i < byteChars.length; i++) bytes[i] = byteChars.charCodeAt(i)
-  return new File([bytes], fileName, { type: mimeType })
-}
-
 function pasteTextIntoComposeBox(box, text) {
+  const before = box.innerText
   box.focus()
   const selection = window.getSelection()
   const range = document.createRange()
@@ -216,20 +345,76 @@ function pasteTextIntoComposeBox(box, text) {
   range.collapse(false)
   selection?.removeAllRanges()
   selection?.addRange(range)
-  document.execCommand('insertText', false, text)
+  const inserted = document.execCommand('insertText', false, `${before && !/\s$/.test(before) ? '\n' : ''}${text}`)
+  if (!inserted || box.innerText === before) throw new Error('O WhatsApp não confirmou a inserção do texto. Tente novamente.')
 }
 
-function pasteFileIntoComposeBox(box, file) {
-  const dataTransfer = new DataTransfer()
-  dataTransfer.items.add(file)
-  box.focus()
-  const pasteEvent = new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: dataTransfer })
-  box.dispatchEvent(pasteEvent)
+function readActiveChat() {
+  return new Promise((resolve, reject) => {
+    const id = `verify-${Date.now()}-${Math.random()}`
+    const timeout = setTimeout(() => {
+      document.removeEventListener('VOE_VERIFIED_CHAT', handler)
+      reject(new Error('Não foi possível confirmar a conversa ativa. Aguarde e tente novamente.'))
+    }, 2500)
+    function handler(event) {
+      if (event.detail?.id !== id) return
+      clearTimeout(timeout)
+      document.removeEventListener('VOE_VERIFIED_CHAT', handler)
+      resolve(event.detail.phone ?? null)
+    }
+    document.addEventListener('VOE_VERIFIED_CHAT', handler)
+    document.dispatchEvent(new CustomEvent('VOE_VERIFY_ACTIVE_CHAT', { detail: { id } }))
+  })
 }
 
-window.addEventListener('message', event => {
+function sendMediaThroughBridge(payload) {
+  return new Promise((resolve, reject) => {
+    const id = `media-${Date.now()}-${Math.random()}`
+    const timeout = setTimeout(() => {
+      document.removeEventListener('VOE_MEDIA_SENT', handler)
+      reject(new Error('Envio sem confirmação. Confira a conversa antes de tentar novamente.'))
+    }, 90000)
+    function handler(event) {
+      if (event.detail?.id !== id) return
+      clearTimeout(timeout)
+      document.removeEventListener('VOE_MEDIA_SENT', handler)
+      if (event.detail.ok) resolve(event.detail)
+      else reject(new Error(event.detail.error))
+    }
+    document.addEventListener('VOE_MEDIA_SENT', handler)
+    document.dispatchEvent(new CustomEvent('VOE_SEND_MEDIA', { detail: { ...payload, id } }))
+  })
+}
+
+let insertionPending = false
+window.addEventListener('message', async event => {
   const sidebarFrame = document.getElementById('voe-sidebar-frame')
-  if (!sidebarFrame) return
+  const centerFrame = document.getElementById('voe-message-center-frame')
+  if (!sidebarFrame || (event.source !== sidebarFrame.contentWindow && event.source !== centerFrame?.contentWindow)) return
+  const source = event.source
+  const replyToSource = data => source.postMessage(data, event.origin)
+
+  if (event.data?.type === 'VOE_CENTER_CONTEXT' && source === sidebarFrame.contentWindow) {
+    const next = event.data.context
+    if (centerContext?.scope?.workspaceId !== next?.scope?.workspaceId || centerContext?.scope?.userId !== next?.scope?.userId) {
+      centerOpen = false
+      document.dispatchEvent(new CustomEvent('VOE_CANCEL_MEDIA_PREPARATION'))
+    }
+    centerContext = next
+    centerFrame?.contentWindow.postMessage({ type: 'VOE_CENTER_CONTEXT', context: next }, '*')
+    scheduleCenterLayout()
+    return
+  }
+  if (event.data?.type === 'VOE_CENTER_READY' && source === centerFrame?.contentWindow) {
+    replyToSource({ type: 'VOE_CENTER_CONTEXT', context: centerContext })
+    sidebarFrame.contentWindow.postMessage({ type: 'VOE_REQUEST_CENTER_CONTEXT' }, '*')
+    return
+  }
+  if (event.data?.type === 'VOE_CENTER_SIZE' && source === centerFrame?.contentWindow) {
+    centerOpen = !!event.data.open
+    scheduleCenterLayout()
+    return
+  }
 
   // ── Handshake: sidebar pede o chat ativo ──
   if (event.data?.type === 'VOE_REQUEST_ACTIVE_CHAT') {
@@ -249,40 +434,49 @@ window.addEventListener('message', event => {
   if (event.data?.type === 'VOE_PASTE_INTO_CHAT') {
     const { id, payload } = event.data
 
-    function reply(ok, error) {
-      sidebarFrame.contentWindow.postMessage({ type: 'VOE_PASTE_RESULT', id, ok, error }, '*')
+    function reply(ok, error, confirmed = false) {
+      replyToSource({ type: 'VOE_PASTE_RESULT', id, ok, error, confirmed })
     }
-
-    const box = findComposeBox()
-    if (!box) {
-      reply(false, 'Abra uma conversa no WhatsApp Web antes de colar.')
+    if (insertionPending) {
+      reply(false, 'Aguarde a inserção anterior terminar.')
       return
     }
-
+    insertionPending = true
     try {
+      const revision = chatRevision
+      const phone = await readActiveChat()
+      if (!payload?.expectedPhone || phone !== payload.expectedPhone || revision !== chatRevision || payload.revision !== chatRevision) {
+        throw new Error('A conversa mudou. Volte ao contato correto e tente novamente.')
+      }
+      if (payload.scope && (payload.scope.workspaceId !== centerContext?.scope.workspaceId || payload.scope.userId !== centerContext?.scope.userId)) {
+        throw new Error('O workspace mudou. Abra a Central novamente.')
+      }
+      const box = findComposeBox()
+      if (!box) throw new Error('Abra uma conversa no WhatsApp Web antes de inserir.')
       if (payload?.kind === 'text') {
         pasteTextIntoComposeBox(box, payload.text)
       } else if (payload?.kind === 'file') {
-        const file = base64ToFile(payload.base64, payload.fileName, payload.mimeType)
-        pasteFileIntoComposeBox(box, file)
+        await sendMediaThroughBridge(payload)
       } else {
         reply(false, 'Tipo de conteúdo desconhecido.')
         return
       }
-      reply(true)
+      reply(true, undefined, true)
     } catch (err) {
       reply(false, err instanceof Error ? err.message : String(err))
-    }
+    } finally { insertionPending = false }
     return
   }
 
   // ── Consulta do chat ativo (verificação antes de colar mídia) ──
   if (event.data?.type === 'VOE_GET_CURRENT_CHAT') {
-    sidebarFrame.contentWindow.postMessage({
-      type: 'VOE_CURRENT_CHAT_RESULT',
-      id: event.data.id,
-      phone: lastReportedChat?.phone ?? null,
-    }, '*')
+    const revision = chatRevision
+    try {
+      const phone = await readActiveChat()
+      replyToSource({ type: 'VOE_CURRENT_CHAT_RESULT', id: event.data.id, phone: revision === chatRevision ? phone : null, revision })
+    } catch {
+      replyToSource({ type: 'VOE_CURRENT_CHAT_RESULT', id: event.data.id, phone: null, revision })
+    }
     return
   }
 })

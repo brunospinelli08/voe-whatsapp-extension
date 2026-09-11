@@ -1,338 +1,201 @@
-// MessageCenterPanel.tsx
-// Central de Mensagens — espelha a Central de Mensagens real
-// (ChatMessageCenterBar.tsx + ChatMessageCenterPanel.tsx, aba WhatsApp da
-// oportunidade em app.voeops.com): abas por tipo (Texto, Áudio, Imagem,
-// Vídeo, Documento, Carrossel) e uma lista com os modelos cadastrados do
-// tipo escolhido. Pedido explícito do Bruno, com diferenças conscientes:
-//
-// 1. Tela cheia, não painel embutido (3ª rodada — a versão anterior abria
-//    um bloco dentro do painel de Contexto/Atividades; achado feio e
-//    apertado). `MessageCenterToggle` é só o botão de entrada (renderizado
-//    por LeadPanel.tsx no lugar de sempre); `MessageCenterScreen` é a tela
-//    cheia de verdade, que LeadPanel.tsx renderiza SOZINHA — sem header de
-//    contato, sem abas Contexto/Atividades — com "← Voltar" pra sair
-//    (mesmo padrão de TemplatePickerInline.tsx/CreateTemplateScreen.tsx).
-// 2. Aba extra "Todos" (o real não tem — só abre por tipo), selecionada
-//    por padrão ao abrir a tela. Mistura os 6 tipos numa lista só, cada
-//    item com um selo do próprio tipo pra não ficar ambíguo.
-// 3. "Inserir" (só texto no real) virou "Colar na conversa" pra TODOS os
-//    tipos, inclusive mídia — ver pasteIntoChat.ts. No real, mídia só tem
-//    "Enviar" (manda de verdade via canal do backend); aqui não existe
-//    canal de backend equivalente à sessão de WhatsApp Web do próprio
-//    usuário, e "enviar" automático não foi pedido — então "colar" preenche
-//    a caixa de digitar (texto) ou abre o preview de mídia do próprio
-//    WhatsApp (arquivo), sempre deixando o clique final de enviar com o
-//    usuário. Carrossel é a única exceção: não dá pra "colar" um carrossel
-//    numa caixa de texto (é um formato interativo da Cloud API, sem
-//    equivalente manual) — aparece só pra consulta, com o mesmo aviso do
-//    real sobre precisar do dashboard.
-// 4. Sem categorias/tags/"modelos" (coleções) do real — a extensão não tem
-//    esses endpoints ainda. Só busca por título/conteúdo.
-//
-// "Criar modelo" (pedido explícito) não abre um formulário aqui dentro —
-// vai direto pra VOE, na tela de Configurações → Conversas → Central de
-// Mensagens (deep link via ?nav=conversas&tab=central, adicionado em
-// app.voeops.com nesta rodada especificamente pra isso). Cadastrar modelo
-// já tem uma tela completa lá (upload de mídia, carrossel, categorias) —
-// replicar tudo de novo aqui duplicaria manutenção pra um fluxo que não é
-// o cotidiano (cadastra uma vez, usa muitas).
-
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMessageLibrary, type MessageLibraryItem } from '../hooks/useMessageLibrary'
-import { pasteTextIntoChat, pasteMediaIntoChat } from '../lib/pasteIntoChat'
+import { useMessageCenterPreferences } from '../hooks/useMessageCenterPreferences'
+import { useMessageLabels } from '../hooks/useMessageLabels'
+import { pasteTextIntoChat, sendMediaIntoChat } from '../lib/pasteIntoChat'
+import { categoryLabel, CENTER_TYPES, messageSearchText, normalizeSearch, resolveMessage, type MessageCenterContext } from '../lib/messageCenter'
+import { resolveLibraryMediaUrl } from '../lib/libraryMedia'
 import { VOE_API_BASE } from '../config'
 import { Spinner } from './Spinner'
-import {
-  MessageCircleIcon, MicIcon, ImageIcon, VideoIcon, FileTextIcon, LayoutGridIcon,
-  LayersIcon, SearchIcon, XIcon, ClipboardIcon, PlusIcon, ChevronLeftIcon, ChevronRightIcon,
-  BookOpenIcon, ExternalLinkIcon,
-} from './Icons'
+import { BookOpenIcon, ChevronRightIcon, SearchIcon, XIcon, ExternalLinkIcon } from './Icons'
 
-type CenterType = 'all' | 'text' | 'audio' | 'image' | 'video' | 'document' | 'carousel'
-
-const TABS: { type: CenterType; label: string; icon: typeof MessageCircleIcon }[] = [
-  { type: 'all', label: 'Todos', icon: LayersIcon },
-  { type: 'text', label: 'Texto', icon: MessageCircleIcon },
-  { type: 'audio', label: 'Áudio', icon: MicIcon },
-  { type: 'image', label: 'Imagem', icon: ImageIcon },
-  { type: 'video', label: 'Vídeo', icon: VideoIcon },
-  { type: 'document', label: 'Documento', icon: FileTextIcon },
-  { type: 'carousel', label: 'Carrossel', icon: LayoutGridIcon },
-]
-
-const TYPE_ICONS: Record<string, typeof MessageCircleIcon> = {
-  text: MessageCircleIcon,
-  audio: MicIcon,
-  image: ImageIcon,
-  video: VideoIcon,
-  document: FileTextIcon,
-  carousel: LayoutGridIcon,
-}
-
-const TYPE_LABELS: Record<CenterType, string> = {
-  all: 'Todos',
-  text: 'Texto',
-  audio: 'Áudio',
-  image: 'Imagem',
-  video: 'Vídeo',
-  document: 'Documento',
-  carousel: 'Carrossel',
-}
-
-type PasteState = 'idle' | 'pasting' | 'done' | 'error'
-
-/** Botão de entrada — renderizado por LeadPanel.tsx no lugar de onde a
- * Central de Mensagens costumava abrir embutida. */
 export function MessageCenterToggle({ onClick }: { onClick: () => void }) {
-  return (
-    <button type="button" className="msg-center-toggle" onClick={onClick}>
-      <span className="msg-center-toggle-icon"><BookOpenIcon size={14} /></span>
-      Central de Mensagens
-      <ChevronRightIcon size={13} className="msg-center-toggle-chevron" />
-    </button>
-  )
+  return <button type="button" className="msg-center-toggle" onClick={onClick}>
+    <span className="msg-center-toggle-icon"><BookOpenIcon size={14} /></span>
+    Central de Mensagens <ChevronRightIcon size={13} className="msg-center-toggle-chevron" />
+  </button>
 }
 
-interface ItemCardProps {
-  item: MessageLibraryItem
-  showTypeBadge: boolean
-  pasteState: PasteState
-  pasteError: string | null
-  onPaste: () => void
+function MessagePreview({ item, context }: { item: MessageLibraryItem; context: MessageCenterContext }) {
+  const text = resolveMessage(item.content ?? '', context)
+  const [media, setMedia] = useState({ url: '', error: '' })
+  useEffect(() => {
+    let active = true
+    setMedia({ url: '', error: '' })
+    if (item.file_url) void resolveLibraryMediaUrl(item.file_url, context.scope, item.id)
+      .then(url => { if (active) setMedia({ url, error: '' }) })
+      .catch(error => { if (active) setMedia({ url: '', error: error.message }) })
+    return () => { active = false }
+  }, [item.id, item.file_url, context.scope.userId, context.scope.workspaceId])
+  const previewFailed = () => setMedia(previous => ({ ...previous, error: 'Prévia indisponível neste navegador. Você ainda pode confirmar o envio do arquivo.' }))
+  return <div className="mc-preview">
+    {text.content && <p>{text.content}</p>}
+    {text.missing.length > 0 && <p className="mc-warning">Falta preencher: {text.missing.join(', ')}. Revise antes de enviar.</p>}
+    {media.url && item.content_type === 'audio' && <audio controls preload="none" src={media.url} onError={previewFailed} aria-label={item.title} />}
+    {media.url && item.content_type === 'video' && <video controls preload="none" src={media.url} onError={previewFailed} aria-label={item.title} />}
+    {media.url && item.content_type === 'image' && <img loading="lazy" src={media.url} onError={previewFailed} alt={item.title} />}
+    {media.url && item.content_type === 'document' && <a href={media.url} target="_blank" rel="noopener noreferrer">Abrir documento <ExternalLinkIcon size={12} /></a>}
+    {media.error && <p className="mc-warning" role="status">{media.error}</p>}
+    {item.content_type === 'carousel' && <>
+      <div className="mc-carousel">{item.carousel_cards?.map((card, i) => <div key={i}>
+        {card.header_type === 'image' ? <img loading="lazy" src={card.header_url} alt={`Cartão ${i + 1}`} /> : <video controls preload="none" src={card.header_url} />}
+        {card.body_text && <p>{card.body_text}</p>}
+      </div>)}</div>
+      <p className="muted">O envio deste formato está disponível no painel da Voe.</p>
+    </>}
+  </div>
 }
 
-function ItemCard({ item, showTypeBadge, pasteState, pasteError, onPaste }: ItemCardProps) {
-  const Icon = TYPE_ICONS[item.content_type]
-  const isText = item.content_type === 'text'
-  const isCarousel = item.content_type === 'carousel'
-  const isMedia = !isText && !isCarousel
-
-  return (
-    <li className="msg-center-item">
-      {isText && (
-        <>
-          <div className="msg-center-item-title-row">
-            {item.is_favorite && <span className="message-library-fav">★</span>}
-            <span className="msg-center-item-title">{item.title}</span>
-            {showTypeBadge && Icon && <span className="msg-center-type-badge"><Icon size={10} /></span>}
-          </div>
-          {item.content && <p className="msg-center-item-preview">{item.content}</p>}
-        </>
-      )}
-
-      {isMedia && (
-        <div className="msg-center-media-row">
-          <div className="msg-center-thumb">
-            {item.content_type === 'image' && item.file_url ? (
-              <img src={item.file_url} alt={item.title} />
-            ) : item.content_type === 'video' && item.file_url ? (
-              <video src={item.file_url} muted />
-            ) : (
-              Icon && <Icon size={16} />
-            )}
-          </div>
-          <div className="msg-center-media-info">
-            <div className="msg-center-item-title-row">
-              {item.is_favorite && <span className="message-library-fav">★</span>}
-              <span className="msg-center-item-title">{item.title}</span>
-              {showTypeBadge && Icon && <span className="msg-center-type-badge"><Icon size={10} /></span>}
-            </div>
-            {item.file_name && <p className="msg-center-item-preview">{item.file_name}</p>}
-          </div>
-        </div>
-      )}
-
-      {isCarousel && (
-        <>
-          <div className="msg-center-item-title-row">
-            {item.is_favorite && <span className="message-library-fav">★</span>}
-            <span className="msg-center-item-title">{item.title}</span>
-          </div>
-          {item.carousel_cards && item.carousel_cards.length > 0 && (
-            <div className="msg-center-carousel-strip">
-              {item.carousel_cards.slice(0, 6).map((card, i) => (
-                <div key={i} className="msg-center-carousel-card">
-                  {card.header_type === 'image' ? (
-                    <img src={card.header_url} alt={`Card ${i + 1}`} />
-                  ) : (
-                    <video src={card.header_url} muted />
-                  )}
-                </div>
-              ))}
-              {item.carousel_cards.length > 6 && (
-                <div className="msg-center-carousel-more">+{item.carousel_cards.length - 6}</div>
-              )}
-            </div>
-          )}
-        </>
-      )}
-
-      <div className="msg-center-item-footer">
-        <span className="msg-center-category">{item.category ?? 'geral'}</span>
-        {isCarousel ? (
-          <span className="msg-center-carousel-hint">Envie pelo dashboard</span>
-        ) : (
-          <button
-            type="button"
-            className={`msg-center-paste-btn${pasteState === 'done' ? ' is-done' : ''}`}
-            disabled={pasteState === 'pasting'}
-            onClick={onPaste}
-          >
-            <ClipboardIcon size={10} />
-            {pasteState === 'pasting' ? 'Colando…' : pasteState === 'done' ? 'Colado!' : 'Colar na conversa'}
-          </button>
-        )}
-      </div>
-      {pasteState === 'error' && pasteError && <p className="error-text">{pasteError}</p>}
-    </li>
-  )
-}
-
-interface ScreenProps {
-  /** Nome/telefone do chat ativo — só pra deixar claro pra qual conversa o
-   * "colar" vai, evitando confundir num dia com várias abas abertas. */
-  chatName: string | null
-  chatPhone: string
+interface Props {
+  context: MessageCenterContext
   onClose: () => void
+  docked?: boolean
+  visible?: boolean
 }
 
-export function MessageCenterScreen({ chatName, chatPhone, onClose }: ScreenProps) {
-  const { messages, loading, error } = useMessageLibrary()
-  const [activeType, setActiveType] = useState<CenterType>('all')
-  const [search, setSearch] = useState('')
-  const [pasteStates, setPasteStates] = useState<Record<string, { state: PasteState; error: string | null }>>({})
+export function MessageCenterScreen({ context, onClose, docked = false, visible = true }: Props) {
+  const { messages, loading, refreshing, error, refetch } = useMessageLibrary(context.scope)
+  const [prefs, setPrefs] = useMessageCenterPreferences(context.scope)
+  const { labels, categories: configuredCategories, error: labelsError } = useMessageLabels(context.scope)
+  const [expanded, setExpanded] = useState<string | null>(null)
+  const [review, setReview] = useState<{ id: string; caption: string } | null>(null)
+  const [action, setAction] = useState<{ id: string; status: 'pending' | 'done' | 'error'; message: string } | null>(null)
+  const listRef = useRef<HTMLUListElement>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
+  const currentPhone = useRef(context.chat?.phone)
+  const insertion = useRef<AbortController | null>(null)
+  const generation = useRef(0)
+  currentPhone.current = context.chat?.phone
 
-  const filteredItems = useMemo(() => {
-    let list = activeType === 'all' ? messages : messages.filter(m => m.content_type === activeType)
-    if (search.trim()) {
-      const q = search.trim().toLowerCase()
-      list = list.filter(m => m.title.toLowerCase().includes(q) || (m.content ?? '').toLowerCase().includes(q))
-    }
-    return list
-  }, [messages, activeType, search])
+  useEffect(() => {
+    generation.current++
+    insertion.current?.abort()
+    insertion.current = null
+    setExpanded(null)
+    setReview(null)
+    setAction(null)
+    return () => { generation.current++; insertion.current?.abort() }
+  }, [context.chat?.phone, context.scope.userId, context.scope.workspaceId])
 
-  const totalOfType = useMemo(
-    () => (activeType === 'all' ? messages.length : messages.filter(m => m.content_type === activeType).length),
-    [messages, activeType],
-  )
+  useEffect(() => {
+    if (visible) {
+      searchRef.current?.focus()
+      window.dispatchEvent(new Event('voe-center-open'))
+    } else { setExpanded(null); setReview(null) }
+  }, [visible])
 
-  function selectTab(type: CenterType) {
-    setActiveType(type)
-    setSearch('')
-  }
+  const indexed = useMemo(() => messages.map(item => ({ item, text: messageSearchText(item, labels) })), [messages, labels])
+  const categories = useMemo(() => {
+    const extra = [...new Set(messages.map(item => item.category || 'geral'))].filter(slug => !configuredCategories.some(category => category.slug === slug))
+    return [...configuredCategories, ...extra.map(slug => ({ slug, name: categoryLabel(slug, labels) }))]
+  }, [messages, configuredCategories, labels])
+  const filtered = useMemo(() => {
+    const terms = normalizeSearch(prefs.search).split(/\s+/).filter(Boolean)
+    const items = indexed.filter(({ item, text }) =>
+      (prefs.type === 'all' || item.content_type === prefs.type) &&
+      (!prefs.categories.length || prefs.categories.includes(item.category || 'geral')) &&
+      (prefs.filter !== 'favorites' || item.is_favorite) &&
+      (prefs.filter !== 'recent' || prefs.recent.includes(item.id)) &&
+      terms.every(term => text.includes(term)),
+    ).map(({ item }) => item)
+    if (prefs.filter === 'recent') items.sort((a, b) => prefs.recent.indexOf(a.id) - prefs.recent.indexOf(b.id))
+    return items
+  }, [indexed, prefs.type, prefs.categories, prefs.filter, prefs.recent, prefs.search])
 
-  async function handlePaste(item: MessageLibraryItem) {
-    setPasteStates(prev => ({ ...prev, [item.id]: { state: 'pasting', error: null } }))
+  useEffect(() => {
+    if (listRef.current && visible) listRef.current.scrollTop = prefs.scrollTop
+  }, [visible, loading, prefs.scrollTop])
+
+  async function insert(item: MessageLibraryItem, caption = '') {
+    const phone = context.chat?.phone
+    if (!phone || (insertion.current && !insertion.current.signal.aborted)) return
+    const version = generation.current
+    const controller = new AbortController()
+    insertion.current = controller
+    setAction({ id: item.id, status: 'pending', message: item.content_type === 'text' ? 'Inserindo…' : 'Preparando arquivo…' })
     try {
+      const resolved = resolveMessage(item.content ?? '', context)
       if (item.content_type === 'text') {
-        await pasteTextIntoChat(item.content)
+        await pasteTextIntoChat(resolved.content, phone, context.scope, controller.signal)
       } else if (item.file_url) {
-        await pasteMediaIntoChat(item.file_url, item.file_name ?? item.title)
-      } else {
-        throw new Error('Esse item não tem conteúdo pra colar.')
-      }
-      setPasteStates(prev => ({ ...prev, [item.id]: { state: 'done', error: null } }))
-      setTimeout(() => {
-        setPasteStates(prev => (prev[item.id]?.state === 'done' ? { ...prev, [item.id]: { state: 'idle', error: null } } : prev))
-      }, 2500)
+        const url = await resolveLibraryMediaUrl(item.file_url, context.scope, item.id)
+        controller.signal.throwIfAborted()
+        setAction({ id: item.id, status: 'pending', message: 'Enviando…' })
+        await sendMediaIntoChat(url, item.file_name || item.title, item.content_type, caption, phone, context.scope, controller.signal)
+      } else throw new Error('Este modelo não tem um arquivo disponível.')
+      if (version !== generation.current || currentPhone.current !== phone) return
+      setPrefs({ recent: [item.id, ...prefs.recent.filter(id => id !== item.id)].slice(0, 30) })
+      setAction({ id: item.id, status: 'done', message: item.content_type === 'text' ? 'Inserido. Revise e envie no WhatsApp.' : 'Mídia enviada ao WhatsApp.' })
+      setReview(null)
     } catch (err) {
-      setPasteStates(prev => ({
-        ...prev,
-        [item.id]: { state: 'error', error: err instanceof Error ? err.message : 'Erro ao colar na conversa' },
-      }))
-    }
+      if (version === generation.current) setAction({ id: item.id, status: 'error', message: err instanceof Error ? err.message : 'Não foi possível inserir.' })
+    } finally { if (insertion.current === controller) insertion.current = null }
   }
 
-  const typeLabel = TYPE_LABELS[activeType]
-
-  return (
-    <div className="msg-center-screen">
-      <div className="template-picker-header">
-        <button type="button" className="back-button" onClick={onClose}>
-          <ChevronLeftIcon size={13} /> Voltar
-        </button>
-        <span>Central de Mensagens</span>
+  return <section className={`mc-panel${docked ? ' mc-panel-docked' : ''}`} aria-label="Central de Mensagens"
+    onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); onClose() } }}>
+    <header className="mc-header">
+      <div><BookOpenIcon size={15} /><strong>Central de Mensagens</strong><span className="mc-count">{filtered.length}</span></div>
+      <button type="button" className="mc-icon-button" onClick={onClose} aria-label={docked ? 'Recolher Central' : 'Voltar ao contato'}><XIcon size={16} /></button>
+    </header>
+    <div className="mc-context" title={context.chat?.phone}>Para <strong>{context.contact?.name || context.chat?.name || context.chat?.phone || 'nenhuma conversa'}</strong></div>
+    <div className="mc-tools">
+      <div className="mc-search"><SearchIcon size={14} /><input ref={searchRef} aria-label="Buscar mensagens" placeholder="Buscar mensagem, categoria ou tag…"
+        value={prefs.search} onChange={e => setPrefs({ search: e.target.value, scrollTop: 0 })} />
+        {prefs.search && <button type="button" className="mc-icon-button" aria-label="Limpar busca" onClick={() => { setPrefs({ search: '', scrollTop: 0 }); searchRef.current?.focus() }}><XIcon size={12} /></button>}
       </div>
-
-      <p className="msg-center-context">
-        <MessageCircleIcon size={11} /> Colando em <strong>{chatName || chatPhone}</strong>
-      </p>
-
-      <div className="msg-center-type-grid">
-        {TABS.map(({ type, label, icon: Icon }) => (
-          <button
-            key={type}
-            type="button"
-            className={`msg-center-type-btn${activeType === type ? ' is-active' : ''}`}
-            onClick={() => selectTab(type)}
-          >
-            <Icon size={14} />
-            {label}
-          </button>
-        ))}
+      {(!docked || prefs.type === 'all' || prefs.type === 'carousel') && <div className="mc-types" aria-label="Tipos de mensagem">{CENTER_TYPES.map(({ type, label }) => <button type="button" key={type}
+        aria-pressed={prefs.type === type} onClick={() => setPrefs({ type, scrollTop: 0 })}>{label}</button>)}</div>}
+      <div className="mc-filters">
+        <div>{([{ value: 'all', label: 'Todas' }, { value: 'favorites', label: 'Favoritas' }, { value: 'recent', label: 'Recentes' }] as const).map(({ value, label }) =>
+          <button type="button" key={value} aria-pressed={prefs.filter === value} onClick={() => setPrefs({ filter: value, scrollTop: 0 })}>{label}</button>)}</div>
       </div>
-
-      <a
-        href={`${VOE_API_BASE}/settings?nav=conversas&tab=central`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="msg-center-create-cta"
-      >
-        <PlusIcon size={11} />
-        Criar modelo novo na VOE
-        <ExternalLinkIcon size={11} className="msg-center-create-cta-arrow" />
-      </a>
-
-      <p className="msg-center-drawer-count">
-        {typeLabel} · {filteredItems.length} {filteredItems.length === 1 ? 'item' : 'itens'}
-      </p>
-
-      <div className="message-library-search">
-        <SearchIcon size={11} />
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder={`Buscar ${typeLabel.toLowerCase()}…`}
-          autoFocus
-        />
-        {search && (
-          <button type="button" onClick={() => setSearch('')} aria-label="Limpar busca">
-            <XIcon size={10} />
-          </button>
-        )}
+      <div className="mc-categories" aria-label="Filtrar por temas">
+        {categories.map(category => <button type="button" key={category.slug} aria-pressed={prefs.categories.includes(category.slug)}
+          onClick={() => setPrefs({ categories: prefs.categories.includes(category.slug) ? prefs.categories.filter(slug => slug !== category.slug) : [...prefs.categories, category.slug], scrollTop: 0 })}>{category.name}</button>)}
+        {prefs.categories.length > 0 && <button type="button" className="mc-clear-categories" onClick={() => setPrefs({ categories: [], scrollTop: 0 })}>Limpar temas</button>}
       </div>
-
-      {loading && <Spinner label="Carregando…" />}
-
-      {error && (
-        <div className="error-banner">
-          <span>⚠</span>
-          <span>{error}</span>
-        </div>
-      )}
-
-      {!loading && !error && filteredItems.length === 0 && (
-        <p className="muted msg-center-empty">
-          {totalOfType === 0
-            ? `Nada cadastrado ainda em ${typeLabel.toLowerCase()}.`
-            : 'Nenhum resultado para essa busca.'}
-        </p>
-      )}
-
-      {!loading && filteredItems.length > 0 && (
-        <ul className="msg-center-list">
-          {filteredItems.map(item => (
-            <ItemCard
-              key={item.id}
-              item={item}
-              showTypeBadge={activeType === 'all'}
-              pasteState={pasteStates[item.id]?.state ?? 'idle'}
-              pasteError={pasteStates[item.id]?.error ?? null}
-              onPaste={() => handlePaste(item)}
-            />
-          ))}
-        </ul>
-      )}
+      {labelsError && <p className="mc-labels-error" role="status">{labelsError}</p>}
     </div>
-  )
+    {error && <div className="mc-error" role="alert">{error} <button type="button" onClick={refetch}>Tentar novamente</button></div>}
+    {loading && <Spinner label="Carregando mensagens…" />}
+    <ul ref={listRef} className="mc-list" onScroll={e => { if (visible) setPrefs({ scrollTop: e.currentTarget.scrollTop }) }} aria-busy={loading}>
+      {!loading && filtered.length === 0 && <li className="mc-empty">{messages.length ? 'Nenhuma mensagem com esses filtros.' : 'Nenhuma mensagem cadastrada.'}
+        {messages.length > 0 && <button type="button" onClick={() => setPrefs({ search: '', categories: [], filter: 'all', type: 'all', scrollTop: 0 })}>Limpar filtros</button>}</li>}
+      {filtered.map(item => {
+        const resolved = resolveMessage(item.content ?? '', context)
+        const itemAction = action?.id === item.id ? action : null
+        const isExpanded = expanded === item.id
+        const isText = item.content_type === 'text'
+        return <li className="mc-item" key={item.id}>
+          <div className="mc-item-top">
+            <button type="button" className="mc-item-summary" aria-expanded={isExpanded} onClick={() => { setExpanded(isExpanded ? null : item.id); setReview(null) }}>
+              <span className="mc-item-title">{item.is_favorite && <span className="mc-star" aria-label="Favorita">★ </span>}{item.title}</span>
+              <span className="mc-item-excerpt">{isText ? resolved.content : item.file_name || resolved.content || 'Ver prévia'}</span>
+            </button>
+            {item.content_type !== 'carousel' && <button type="button" className="mc-insert" disabled={action?.status === 'pending' || !context.chat}
+              onClick={() => {
+                if (isText || item.content_type === 'audio') void insert(item)
+                else { setExpanded(item.id); setReview({ id: item.id, caption: resolved.content }) }
+              }}>{itemAction?.status === 'pending' ? 'Aguarde…' : isText ? 'Inserir' : item.content_type === 'audio' ? 'Enviar áudio' : 'Revisar envio'}</button>}
+          </div>
+          <div className="mc-item-meta"><span>{categoryLabel(item.category, labels)}</span><span>{CENTER_TYPES.find(type => type.type === item.content_type)?.label || item.content_type}</span>
+            {!!item.use_count && <span>{item.use_count}× usado</span>}
+            {resolved.missing.length > 0 && <span className="mc-missing">Variáveis sem valor</span>}
+          </div>
+          {isExpanded && <MessagePreview item={item} context={context} />}
+          {itemAction && <p className={`mc-feedback mc-feedback-${itemAction.status}`} role={itemAction.status === 'error' ? 'alert' : 'status'}>{itemAction.message}</p>}
+          {isExpanded && review?.id === item.id && <div className="mc-send-review">
+            <label>Legenda<textarea aria-label="Legenda da mídia" value={review.caption} disabled={action?.status === 'pending'} onChange={event => setReview({ id: item.id, caption: event.target.value })} /></label>
+            <div><button type="button" className="mc-insert" disabled={action?.status === 'pending' || !context.chat} onClick={() => void insert(item, review.caption)}>Confirmar envio</button>
+              <button type="button" className="mc-icon-button" disabled={action?.status === 'pending'} onClick={() => setReview(null)}>Cancelar</button></div>
+          </div>}
+        </li>
+      })}
+    </ul>
+    <footer className="mc-footer">
+      <button type="button" onClick={refetch} disabled={refreshing || loading}>{refreshing ? 'Atualizando…' : 'Atualizar'}</button>
+      <a href={`${VOE_API_BASE}/settings?nav=conversas&tab=central`} target="_blank" rel="noopener noreferrer">Gerenciar na Voe <ExternalLinkIcon size={12} /></a>
+    </footer>
+  </section>
 }

@@ -1,5 +1,5 @@
 // App.tsx
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from './hooks/useAuth'
 import { useActiveChat } from './hooks/useActiveChat'
 import { useActiveWorkspace } from './hooks/useActiveWorkspace'
@@ -18,13 +18,27 @@ export function App() {
   const chat = useActiveChat()
   // Contato ativo (+ refetch), reportado pelo LeadPanel — alimenta o menu
   // "•••" do header (ver ContactActionsMenu.tsx / nota em LeadPanel.tsx).
-  const [contactCtx, setContactCtx] = useState<{ contact: LeadContact; refetch: () => void } | null>(null)
+  const [contactCtx, setContactCtx] = useState<{ contact: LeadContact; chatPhone: string; workspaceId: string; userId: string; refetch: () => void } | null>(null)
   const {
     activeWorkspace,
     loading: workspaceLoading,
     selectWorkspace,
     changeWorkspace,
   } = useActiveWorkspace(session?.user.id ?? null)
+
+  useEffect(() => {
+    const context = !loading && !workspaceLoading && session && activeWorkspace ? {
+      scope: { userId: session.user.id, workspaceId: activeWorkspace.id }, chat,
+      contact: contactCtx?.chatPhone === chat?.phone && contactCtx?.workspaceId === activeWorkspace.id && contactCtx?.userId === session.user.id ? contactCtx.contact : null,
+    } : null
+    const sendContext = () => window.parent.postMessage({ type: 'VOE_CENTER_CONTEXT', context }, '*')
+    function onMessage(event: MessageEvent) {
+      if (event.source === window.parent && event.data?.type === 'VOE_REQUEST_CENTER_CONTEXT') sendContext()
+    }
+    sendContext()
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [loading, workspaceLoading, session, activeWorkspace, chat, contactCtx])
 
   if (loading || (session && workspaceLoading)) {
     return (
@@ -69,7 +83,7 @@ export function App() {
           // key={chat.phone}: remonta o painel ao trocar de conversa — sem
           // isso, o estado "escolhi criar oportunidade" de um chat vazava
           // pro próximo chat aberto.
-          <LeadPanel key={chat.phone} chat={chat} workspaceId={activeWorkspace.id} onContactContextChange={setContactCtx} />
+          <LeadPanel key={`${session.user.id}:${activeWorkspace.id}:${chat.phone}`} chat={chat} userId={session.user.id} workspaceId={activeWorkspace.id} onContactContextChange={setContactCtx} />
         ) : (
           <div className="empty-state">
             <p>Abra uma conversa individual no WhatsApp Web pra ver os dados do lead aqui.</p>

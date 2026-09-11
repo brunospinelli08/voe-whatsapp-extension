@@ -66,10 +66,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   // "Colar na conversa" de um item de mídia da Central de Mensagens: a
   // sidebar não tem bypass de CORS pro Storage do Supabase (mesmo motivo de
   // VOE_API_FETCH acima), então quem baixa o arquivo de verdade é aqui —
-  // devolve em base64 pra content.js reconstruir um File e colar na caixa
-  // de mensagem do WhatsApp Web (ver pasteIntoChat.ts).
+  // devolve em base64 para o envio pelo bridge do WhatsApp Web.
   if (message?.type === 'VOE_FETCH_MEDIA_BASE64') {
-    fetch(message.url)
+    fetch(message.url, { signal: AbortSignal.timeout(20000) })
       .then(async res => {
         if (!res.ok) throw new Error(`Erro ${res.status} ao baixar o arquivo`)
         const buffer = await res.arrayBuffer()

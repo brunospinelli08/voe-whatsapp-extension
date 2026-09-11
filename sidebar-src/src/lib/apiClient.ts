@@ -32,8 +32,13 @@ async function resolveVoeToken(): Promise<{ voeToken: string; userId: string; wo
   return { voeToken, userId, workspaceId: activeWorkspace.id }
 }
 
-async function request<T>(path: string, init: RequestInit = {}, retrying = false): Promise<T> {
+export interface ApiScope { userId: string; workspaceId: string }
+
+async function request<T>(path: string, init: RequestInit = {}, retrying = false, scope?: ApiScope): Promise<T> {
   const { voeToken, userId, workspaceId } = await resolveVoeToken()
+  if (scope && (scope.userId !== userId || scope.workspaceId !== workspaceId)) {
+    throw new ApiError('O workspace mudou. Abra a Central novamente.', 409)
+  }
 
   const res = await backgroundFetch(`${VOE_API_BASE}${path}`, {
     ...init,
@@ -49,7 +54,7 @@ async function request<T>(path: string, init: RequestInit = {}, retrying = false
     // dashboard — limpa e tenta uma vez gerar um novo antes de propagar o
     // erro.
     await clearVoeToken(userId, workspaceId)
-    return request<T>(path, init, true)
+    return request<T>(path, init, true, scope)
   }
 
   const body = await res.json().catch(() => ({}))
@@ -87,6 +92,7 @@ async function requestUpload<T>(
 
 export const voeApi = {
   get: <T>(path: string) => request<T>(path, { method: 'GET' }),
+  getScoped: <T>(path: string, scope: ApiScope) => request<T>(path, { method: 'GET' }, false, scope),
   post: <T>(path: string, body: unknown) =>
     request<T>(path, { method: 'POST', body: JSON.stringify(body) }),
   put: <T>(path: string, body: unknown) =>
