@@ -77,7 +77,26 @@ export function SegmentFieldInput({ field, value, onChange }: Props) {
     )
   }
 
-  const inputType = field.type === 'number' || field.type === 'currency' ? 'number' : field.type === 'date' ? 'date' : 'text'
+  if (field.type === 'currency') {
+    const amount = value === '' || value == null ? null : Number(value)
+    const formatted = amount !== null && Number.isFinite(amount)
+      ? amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''
+    return (
+      <label>
+        {label}
+        <span className="currency-form-input">
+          <span>R$</span>
+          <input inputMode="decimal" placeholder="0,00" value={formatted} required={field.required}
+            onChange={e => {
+              const digits = e.target.value.replace(/\D/g, '')
+              onChange(digits ? String(Number(digits) / 100) : '')
+            }} />
+        </span>
+      </label>
+    )
+  }
+
+  const inputType = field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'
   return (
     <label>
       {label}

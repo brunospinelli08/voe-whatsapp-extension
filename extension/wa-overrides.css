@@ -6,3 +6,43 @@
 body {
   overflow-x: hidden;
 }
+
+/* Controle neutro, no mesmo estilo do botão do painel avançado do Inbox.
+   Cores isoladas do WhatsApp; o content script aplica a escolha da extensão. */
+#voe-sidebar-toggle {
+  --voe-toggle-surface: hsl(0 0% 100%);
+  --voe-toggle-hover: hsl(228 33% 97%);
+  --voe-toggle-text: hsl(210 9% 42%);
+  --voe-toggle-border: hsl(220 13% 85%);
+  padding: 0;
+  background: var(--voe-toggle-surface);
+  color: var(--voe-toggle-text);
+  border: 1px solid var(--voe-toggle-border);
+  border-right: 0;
+  box-shadow: -1px 0 3px hsl(0 0% 0% / 0.08);
+  transition: right 0.2s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+#voe-sidebar-toggle:hover {
+  background: var(--voe-toggle-hover);
+  color: var(--voe-toggle-text);
+}
+
+#voe-sidebar-toggle:focus-visible {
+  outline: 2px solid hsl(175 100% 39%);
+  outline-offset: 2px;
+}
+
+#voe-sidebar-toggle[data-voe-theme='dark'] {
+  --voe-toggle-surface: hsl(220 12% 15%);
+  --voe-toggle-hover: hsl(220 12% 20%);
+  --voe-toggle-text: hsl(220 14% 80%);
+  --voe-toggle-border: hsl(224 11% 28%);
+}
+
+#voe-sidebar-frame { background: hsl(0 0% 100%); color-scheme: light; }
+#voe-sidebar-frame[data-voe-theme='dark'] { background: hsl(220 12% 15%); color-scheme: dark; }
+
+@media (prefers-reduced-motion: reduce) {
+  #voe-sidebar-toggle { transition: none; }
+}

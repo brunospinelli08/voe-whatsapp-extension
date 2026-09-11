@@ -1,5 +1,23 @@
 # voe-whatsapp-extension
 
+## Versão 1.1.1 — ajustes visuais
+
+- Painel alinhado ao visual do Inbox, com campos e navegação compactos.
+- Contato organizado em duas linhas com edição direta.
+- Máscaras de moeda e datas, incluindo campos monetários de segmento.
+- Temas claro/escuro com preferência salva e botão lateral sincronizado.
+
+Após atualizar, recarregue a extensão em `chrome://extensions` e atualize
+a aba do WhatsApp Web para carregar os scripts novos.
+
+## Tema da extensão
+
+Use o botão de lua/sol no cabeçalho para alternar entre claro e escuro.
+A escolha é salva em `chrome.storage.local` (`voe-ext-theme`), vale também
+para a tela de login e o gravador e é sincronizada entre as abas da extensão.
+Sem escolha anterior, o tema é claro. O botão lateral de abrir/ocultar acompanha
+o tema da extensão, independentemente do tema do WhatsApp Web.
+
 Extensão Chrome que injeta um painel de atendimento da VOE dentro do
 WhatsApp Web — canal de fallback para quando a conexão principal do
 módulo Conversas (Evolution API) estiver indisponível.

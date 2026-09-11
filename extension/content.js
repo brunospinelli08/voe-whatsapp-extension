@@ -8,6 +8,27 @@ const COLLAPSED_WIDTH = 36
 
 let lastReportedChat = null
 let sidebarCollapsed = false
+let extensionTheme = 'light'
+
+// Tema próprio da extensão: nunca altera o tema da página do WhatsApp.
+function applyExtensionTheme(value) {
+  extensionTheme = value === 'dark' ? 'dark' : 'light'
+  for (const id of ['voe-sidebar-toggle', 'voe-sidebar-frame']) {
+    const element = document.getElementById(id)
+    if (element) element.dataset.voeTheme = extensionTheme
+  }
+}
+
+let themeChanged = false
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && 'voe-ext-theme' in changes) {
+    themeChanged = true
+    applyExtensionTheme(changes['voe-ext-theme'].newValue)
+  }
+})
+chrome.storage.local.get('voe-ext-theme').then(stored => {
+  if (!themeChanged) applyExtensionTheme(stored['voe-ext-theme'])
+}).catch(() => {})
 
 function isWhatsAppWebReady() {
   return (
@@ -40,7 +61,6 @@ async function injectSidebar() {
     width: ${SIDEBAR_WIDTH}px;
     height: 100%;
     border: none;
-    background: hsl(228, 33%, 97%);
     z-index: 9999;
     transition: width 0.2s ease, opacity 0.2s ease;
   `
@@ -49,8 +69,12 @@ async function injectSidebar() {
   // ── Botão de colapsar/expandir ──
   const toggleBtn = document.createElement('button')
   toggleBtn.id = 'voe-sidebar-toggle'
+  toggleBtn.type = 'button'
   toggleBtn.title = 'Recolher painel VOE'
-  toggleBtn.innerHTML = '‹'
+  toggleBtn.setAttribute('aria-label', toggleBtn.title)
+  toggleBtn.setAttribute('aria-expanded', 'true')
+  toggleBtn.setAttribute('aria-controls', iframe.id)
+  toggleBtn.textContent = '›'
   toggleBtn.style.cssText = `
     position: fixed;
     top: 50%;
@@ -58,9 +82,6 @@ async function injectSidebar() {
     transform: translateY(-50%);
     width: 20px;
     height: 48px;
-    background: hsl(175, 100%, 39%);
-    color: white;
-    border: none;
     border-radius: 6px 0 0 6px;
     cursor: pointer;
     z-index: 10000;
@@ -69,11 +90,10 @@ async function injectSidebar() {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: right 0.2s ease;
-    box-shadow: -2px 0 6px rgba(0,0,0,0.15);
   `
   toggleBtn.addEventListener('click', toggleSidebar)
   document.body.appendChild(toggleBtn)
+  applyExtensionTheme(extensionTheme)
 
   // Abre espaço no layout do WhatsApp Web
   const appElement = document.getElementById('app')
@@ -97,7 +117,7 @@ function toggleSidebar() {
     iframe.style.opacity = '0'
     iframe.style.pointerEvents = 'none'
     toggleBtn.style.right = '0px'
-    toggleBtn.innerHTML = '›'
+    toggleBtn.textContent = '‹'
     toggleBtn.title = 'Expandir painel VOE'
     toggleBtn.style.borderRadius = '6px 0 0 6px'
     if (appElement) appElement.style.width = 'calc(100% - 20px)'
@@ -106,10 +126,12 @@ function toggleSidebar() {
     iframe.style.opacity = '1'
     iframe.style.pointerEvents = 'auto'
     toggleBtn.style.right = `${SIDEBAR_WIDTH}px`
-    toggleBtn.innerHTML = '‹'
+    toggleBtn.textContent = '›'
     toggleBtn.title = 'Recolher painel VOE'
     if (appElement) appElement.style.width = `calc(100% - ${SIDEBAR_WIDTH}px)`
   }
+  toggleBtn.setAttribute('aria-label', toggleBtn.title)
+  toggleBtn.setAttribute('aria-expanded', String(!sidebarCollapsed))
 }
 
 function loadStylesheetOverrides() {

@@ -8,6 +8,7 @@ import { LeadPanel } from './components/LeadPanel'
 import { WorkspaceSelector } from './components/WorkspaceSelector'
 import { Spinner } from './components/Spinner'
 import { ContactActionsMenu } from './components/ContactActionsMenu'
+import { ThemeToggle } from './components/ThemeToggle'
 import type { LeadContact } from './hooks/useLeadLookup'
 
 const voeIconUrl = chrome.runtime.getURL('sidebar/voe-icon.png')
@@ -34,11 +35,11 @@ export function App() {
   }
 
   if (!session) {
-    return <LoginScreen onSignIn={signIn} />
+    return <><div className="theme-toolbar"><ThemeToggle /></div><LoginScreen onSignIn={signIn} /></>
   }
 
   if (!activeWorkspace) {
-    return <WorkspaceSelector user={session.user} onSelect={selectWorkspace} />
+    return <><div className="theme-toolbar"><ThemeToggle /></div><WorkspaceSelector user={session.user} onSelect={selectWorkspace} /></>
   }
 
   return (
@@ -53,11 +54,14 @@ export function App() {
             </button>
           </div>
         </div>
-        <ContactActionsMenu
+        <div className="app-header-actions">
+          <ThemeToggle />
+          <ContactActionsMenu
           contact={contactCtx?.contact ?? null}
           onContactChanged={() => contactCtx?.refetch()}
           onSignOut={signOut}
-        />
+          />
+        </div>
       </header>
 
       <main>

@@ -12,11 +12,11 @@ import { CreateOpportunityForm } from './CreateOpportunityForm'
 import { SaveContactAction } from './SaveContactAction'
 import { LinkExistingOpportunityForm } from './LinkExistingOpportunityForm'
 import { OpportunityDetail } from './OpportunityDetail'
-import { ContactTagsEditor } from './ContactTagsEditor'
+import { ContactInfo } from './ContactInfo'
 import { ActivitiesPanel } from './ActivitiesPanel'
 import { MessageCenterToggle, MessageCenterScreen } from './MessageCenterPanel'
 import { Spinner } from './Spinner'
-import { AlertIcon, BriefcaseIcon, Building2Icon, ChevronLeftIcon, LinkIcon, PlusIcon, PhoneIcon, MailIcon, UserIcon } from './Icons'
+import { AlertIcon, BriefcaseIcon, ChevronLeftIcon, LinkIcon, PlusIcon, UserIcon } from './Icons'
 
 interface Props {
   chat: ActiveChat
@@ -49,6 +49,11 @@ export function LeadPanel({ chat, workspaceId, onContactContextChange }: Props) 
   }
 
   const isLead = contact?.contact_type === 'lead'
+  // No Contexto, evita repetir a identidade já exibida no cadastro.
+  // Diferenças entre WhatsApp e CRM continuam visíveis, sem perder dados.
+  const showWhatsAppIdentity = tab === 'atividades' || !contact || !!error ||
+    Boolean(chat.name && chat.name !== contact.name) ||
+    (contact.phone !== chat.phone && contact.phone_e164 !== chat.phone)
 
   // Tela cheia — some com header de contato, abas Contexto/Atividades, tudo
   // (pedido explícito: "central de mensagens, nada mais"). Não depende do
@@ -61,12 +66,13 @@ export function LeadPanel({ chat, workspaceId, onContactContextChange }: Props) 
 
   return (
     <div className="lead-panel">
-      <header className="active-chat-header">
+      {showWhatsAppIdentity && <header className="active-chat-header">
         <div className="active-chat-header-top">
+          <span className="block-title">WhatsApp</span>
           <strong>{chat.name || chat.phone}</strong>
         </div>
         {chat.name && <span className="chat-phone">{chat.phone}</span>}
-      </header>
+      </header>}
 
       {loading && <Spinner label="Buscando lead…" />}
 
@@ -90,12 +96,14 @@ export function LeadPanel({ chat, workspaceId, onContactContextChange }: Props) 
           <div className="panel-tabs">
             <button
               className={`panel-tab${tab === 'contexto' ? ' is-active' : ''}`}
+              aria-pressed={tab === 'contexto'}
               onClick={() => setTab('contexto')}
             >
               Contexto
             </button>
             <button
               className={`panel-tab${tab === 'atividades' ? ' is-active' : ''}`}
+              aria-pressed={tab === 'atividades'}
               onClick={() => setTab('atividades')}
             >
               Atividades
@@ -106,28 +114,7 @@ export function LeadPanel({ chat, workspaceId, onContactContextChange }: Props) 
           {tab === 'contexto' && (
             <div className="panel-tab-body">
               {contact && (
-                <div className="contact-header-block">
-                  <div className="contact-header-row">
-                    <span className="contact-name">{contact.name || chat.phone}</span>
-                    <span className="contact-role">
-                      {contact.role_title ? contact.role_title : <em>Cargo: Não definido</em>}
-                    </span>
-                  </div>
-                  <div className="contact-meta-row">
-                    {contact.phone && (
-                      <span className="contact-meta"><PhoneIcon size={11} /> {contact.phone}</span>
-                    )}
-                    {contact.email && (
-                      <span className="contact-meta"><MailIcon size={11} /> {contact.email}</span>
-                    )}
-                  </div>
-                  {contact.company?.name && (
-                    <p className="contact-company">
-                      <Building2Icon size={10} /> {contact.company.name}
-                    </p>
-                  )}
-                  <ContactTagsEditor contact={contact} onChanged={refetch} />
-                </div>
+                <ContactInfo key={contact.id} contact={contact} onChanged={invalidateAndRefetch} />
               )}
 
               <div className="opportunity-section">

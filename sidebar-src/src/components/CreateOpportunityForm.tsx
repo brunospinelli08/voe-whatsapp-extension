@@ -301,7 +301,7 @@ export function CreateOpportunityForm({ chat, existingContactId, onCreated, onCa
 
       <label>
         Orçamento estimado
-        <input value={budget} onChange={e => setBudget(maskBRL(e.target.value))} placeholder="0,00" inputMode="numeric" />
+        <span className="currency-form-input"><span>R$</span><input value={budget} onChange={e => setBudget(maskBRL(e.target.value))} placeholder="0,00" inputMode="decimal" /></span>
       </label>
 
       {origins.length > 0 && (

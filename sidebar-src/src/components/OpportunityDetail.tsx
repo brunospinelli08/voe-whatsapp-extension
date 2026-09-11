@@ -193,6 +193,17 @@ export function OpportunityDetail({ opportunity, workspaceId, activeContact, onC
             seriam campos totalmente diferentes (ver resumo). */}
         {segmentFieldDefs.map(field => {
           const value = detail.segment_data[field.key]
+          if (field.type === 'currency') {
+            const amount = value === '' || value == null ? null : Number(value)
+            return (
+              <CurrencyFieldRow
+                key={field.key}
+                label={field.label}
+                value={amount !== null && Number.isFinite(amount) ? amount : null}
+                onSave={v => patchSegmentField(field.key, v == null ? '' : String(v))}
+              />
+            )
+          }
           if (field.type === 'boolean') {
             return (
               <BooleanFieldRow
