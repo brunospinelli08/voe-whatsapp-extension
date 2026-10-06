@@ -1,5 +1,17 @@
 # voe-whatsapp-extension
 
+## Versão 1.4.0 — Trilha de WhatsApp
+
+- Nova Atividade → WhatsApp → **Trilha de WhatsApp**, igual ao dashboard:
+  escolhe o canal (API Voe) e uma trilha pronta de Configurações (ou a
+  sugestão "Follow N (D+X)" da Central de Mensagens), revisa a prévia com a
+  data real de cada passo (dias úteis) e cria todas as mensagens agendadas
+  de uma vez. Texto, dia e horário de cada passo podem ser ajustados só
+  para a oportunidade; se o contato responder, os passos seguintes pausam.
+
+Requer a API da VOE com `GET /api/v1/whatsapp-tracks` (em produção desde
+06/10/2026).
+
 ## Versão 1.3.0 — Atividades e agendamento de WhatsApp iguais à VOE
 
 - Aba Atividades com os mesmos cards do Inbox: concluir/registrar resultado,

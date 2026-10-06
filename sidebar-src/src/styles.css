@@ -3840,3 +3840,147 @@ button:focus-visible, a:focus-visible, summary:focus-visible {
 .tpl-var { border-radius: 3px; padding: 0 2px; background: hsl(48 96% 89%); color: hsl(26 90% 37%); }
 .tpl-var.is-filled { background: hsl(214 95% 93%); color: hsl(224 76% 33%); }
 .tpl-preview-hint { margin: 6px 0 0; font-size: 10px; text-align: center; color: hsl(var(--text-secondary)); }
+
+/* ── Trilha de WhatsApp (réplica do WhatsAppTrackBuilder do dashboard) ── */
+.activity-modal-body[hidden] { display: none; }
+.track-builder { font-weight: 400; }
+.track-intro { margin: 0; font-size: 11px; line-height: 1.45; color: hsl(var(--text-secondary)); }
+.track-section-heading { display: flex; align-items: center; gap: 6px; color: hsl(var(--text-secondary)); }
+.track-section-heading h4 { margin: 0; font-size: 12px; font-weight: 600; color: hsl(var(--text-primary)); }
+.track-section-number {
+  flex-shrink: 0; width: 18px; height: 18px; border-radius: 999px; display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; background: hsl(var(--color-primary) / 0.1); color: hsl(var(--color-primary-dark));
+}
+.track-heading-row { display: flex; align-items: center; justify-content: space-between; }
+.track-refresh {
+  display: inline-flex; align-items: center; gap: 3px; padding: 0; font-size: 10px; font-weight: 500;
+  background: none; box-shadow: none; color: hsl(var(--text-secondary) / 0.7);
+}
+.track-refresh:hover:not(:disabled) { background: none; box-shadow: none; transform: none; color: hsl(var(--color-primary-dark)); }
+
+.track-single-channel {
+  display: flex; align-items: center; gap: 9px; padding: 9px 11px; border-radius: 10px;
+  border: 2px solid hsl(var(--color-primary) / 0.4); background: hsl(var(--color-primary) / 0.05);
+}
+.track-channel-icon {
+  flex-shrink: 0; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  background: hsl(var(--color-primary) / 0.15); color: hsl(var(--color-primary-dark));
+}
+.track-connection { flex-shrink: 0; display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; font-weight: 500; color: hsl(0 84% 60%); }
+.track-connection.is-on { color: hsl(142 72% 35%); }
+.wa-channel-card.track-channel-card.is-selected,
+.wa-channel-card.track-channel-card.is-selected:hover:not(:disabled) {
+  border-color: hsl(var(--color-primary)); background: hsl(var(--color-primary) / 0.05); box-shadow: none;
+}
+.track-check-inline { flex-shrink: 0; color: hsl(var(--color-primary-dark)); }
+
+.track-cards { display: flex; flex-direction: column; gap: 7px; }
+.track-card {
+  position: relative; display: flex; align-items: flex-start; gap: 9px; padding: 10px; text-align: left;
+  border: 1px solid hsl(var(--border)); border-radius: 10px; background: none; box-shadow: none;
+  color: hsl(var(--text-primary)); font-weight: 400;
+}
+.track-card:hover:not(:disabled) { background: hsl(var(--surface-hover) / 0.6); border-color: hsl(var(--color-primary) / 0.3); box-shadow: none; transform: none; }
+.track-card.is-selected,
+.track-card.is-selected:hover:not(:disabled) {
+  border-color: hsl(var(--color-primary)); background: hsl(var(--color-primary) / 0.05); box-shadow: 0 0 0 2px hsl(var(--color-primary) / 0.2);
+}
+.track-card-icon {
+  flex-shrink: 0; width: 30px; height: 30px; border-radius: 999px; display: flex; align-items: center; justify-content: center;
+  background: hsl(var(--color-primary) / 0.1); color: hsl(var(--color-primary-dark));
+}
+.track-card.is-selected .track-card-icon { background: hsl(var(--color-primary)); color: hsl(var(--on-primary)); }
+.track-card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.track-card-name { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+.track-card-name strong { font-size: 12px; font-weight: 600; }
+.track-card-badge {
+  font-size: 8.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; padding: 1px 5px; border-radius: 999px;
+  background: hsl(var(--color-primary) / 0.1); color: hsl(var(--color-primary-dark));
+}
+.track-card-desc {
+  font-size: 10.5px; color: hsl(var(--text-secondary));
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.track-card-steps { margin-top: 3px; font-size: 10px; color: hsl(var(--text-secondary) / 0.75); }
+.track-card-check {
+  flex-shrink: 0; width: 18px; height: 18px; border-radius: 999px; display: flex; align-items: center; justify-content: center;
+  background: hsl(var(--color-primary)); color: hsl(var(--on-primary));
+}
+
+.track-empty {
+  display: flex; flex-direction: column; align-items: center; text-align: center; padding: 22px 14px;
+  border: 1px dashed hsl(var(--color-primary) / 0.3); border-radius: 10px; background: hsl(var(--color-primary) / 0.03);
+}
+.track-empty-icon {
+  width: 38px; height: 38px; border-radius: 999px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;
+  background: hsl(var(--color-primary) / 0.1); color: hsl(var(--color-primary-dark));
+}
+.track-empty-title { margin: 0 0 3px; font-size: 12.5px; font-weight: 600; color: hsl(var(--text-primary)); }
+.track-empty-text { margin: 0 0 12px; font-size: 11px; line-height: 1.45; color: hsl(var(--text-secondary)); }
+.track-empty-actions { display: flex; align-items: center; gap: 6px; }
+.track-empty-link {
+  display: inline-flex; align-items: center; gap: 5px; padding: 7px 11px; border-radius: 8px; text-decoration: none;
+  font-size: 11.5px; font-weight: 600; background: hsl(var(--color-primary)); color: hsl(var(--on-primary));
+}
+.track-empty-link:hover { background: hsl(var(--color-primary-dark)); }
+.track-empty-refresh { display: inline-flex; padding: 7px 9px; }
+
+.track-preview-title { margin: 0 0 8px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: hsl(var(--text-secondary)); }
+.track-preview-title span { text-transform: none; letter-spacing: normal; font-weight: 400; }
+.track-timeline { position: relative; display: flex; flex-direction: column; gap: 8px; }
+.track-timeline.has-line::before {
+  content: ''; position: absolute; left: 13px; top: 14px; bottom: 14px; width: 1px; background: hsl(var(--border));
+}
+.track-step { position: relative; padding-left: 34px; }
+.track-step-number {
+  position: absolute; left: 0; top: 0; z-index: 1; width: 27px; height: 27px; border-radius: 999px;
+  display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;
+  background: hsl(var(--color-primary)); color: hsl(var(--on-primary)); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+.track-step-card { padding: 8px 10px; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--card)); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04); }
+.track-step-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 3px; }
+.track-step-when {
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 999px;
+  font-size: 10px; font-weight: 600; background: hsl(var(--color-primary) / 0.1); color: hsl(var(--color-primary-dark));
+}
+.track-step-when.is-edited { background: hsl(var(--color-primary) / 0.15); box-shadow: 0 0 0 1px hsl(var(--color-primary) / 0.3); }
+.track-step-title { flex: 1; min-width: 0; margin: 0; font-size: 11.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: hsl(var(--text-primary)); }
+.track-step-edit { flex-shrink: 0; padding: 0; background: none; box-shadow: none; color: hsl(var(--text-secondary) / 0.5); }
+.track-step-edit:hover:not(:disabled) { background: none; box-shadow: none; transform: none; color: hsl(var(--color-primary-dark)); }
+.track-step-when-edit { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+.track-day-stepper {
+  display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 8px;
+  background: hsl(var(--color-primary) / 0.1); color: hsl(var(--color-primary-dark));
+}
+.track-stepper-box { display: inline-flex; align-items: center; overflow: hidden; border-radius: 6px; border: 1px solid hsl(var(--color-primary) / 0.25); background: hsl(var(--card)); }
+.track-stepper-box button { padding: 1px 6px; border-radius: 0; background: none; box-shadow: none; color: hsl(var(--color-primary-dark)); font-weight: 600; }
+.track-stepper-box button:hover:not(:disabled) { background: hsl(var(--color-primary) / 0.1); box-shadow: none; transform: none; }
+.track-stepper-box button:disabled { opacity: 0.3; }
+.track-stepper-box > span { width: 20px; text-align: center; font-size: 10.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.track-day-unit { font-size: 10px; font-weight: 500; white-space: nowrap; }
+.track-at { font-size: 10px; color: hsl(var(--text-secondary) / 0.6); }
+.activity-modal-body .track-time-input { width: auto; padding: 3px 6px; font-size: 10.5px; }
+.track-step-file {
+  display: inline-flex; align-items: center; gap: 3px; max-width: 100%; margin-bottom: 3px; padding: 1px 6px; border-radius: 6px;
+  font-size: 10px; background: hsl(var(--surface-hover)); color: hsl(var(--text-secondary));
+}
+.track-step-file strong { font-weight: 600; flex-shrink: 0; }
+.track-step-file span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.track-step-message {
+  margin: 0; font-size: 10.5px; line-height: 1.5; color: hsl(var(--text-secondary));
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.track-step-restore {
+  display: inline-flex; align-items: center; gap: 3px; margin-top: 3px; padding: 0; font-size: 9.5px; font-weight: 500;
+  background: none; box-shadow: none; color: hsl(var(--color-primary-dark) / 0.75);
+}
+.track-step-restore:hover:not(:disabled) { background: none; box-shadow: none; transform: none; color: hsl(var(--color-primary-dark)); }
+.track-step-editor { display: flex; flex-direction: column; gap: 5px; }
+.track-step-editor-tools { display: flex; justify-content: flex-end; }
+.track-step-editor-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.track-step-editor-foot p { margin: 0; font-size: 9.5px; line-height: 1.3; color: hsl(var(--text-secondary) / 0.65); }
+.track-step-editor-foot .link-button { font-size: 11px; color: hsl(var(--color-primary-dark)); }
+
+.track-footer { display: flex; flex-direction: column; gap: 6px; padding-top: 10px; border-top: 1px solid hsl(var(--border)); }
+.track-footer > p { margin: 0; min-height: 14px; font-size: 10.5px; color: hsl(var(--text-secondary) / 0.7); }
+.track-footer .activity-modal-actions button[type='button']:last-child { display: inline-flex; align-items: center; gap: 5px; }

@@ -17,8 +17,8 @@
 // tipos (Título, Descrição, Responsável), com os cards "Agendar mensagem /
 // Trilha de WhatsApp" no topo, o "Quando" com os presets de WhatsApp
 // (WhatsAppWhenPicker), a seção "Configuração WhatsApp" e o "Resumo do
-// agendamento" (WhatsAppActivitySection.tsx). A Trilha fica "Em breve" até a
-// parte 2 (construtor de trilha).
+// agendamento" (WhatsAppActivitySection.tsx). O card "Trilha de WhatsApp"
+// abre o WhatsAppTrackBuilder no lugar do formulário.
 
 import { useEffect, useState } from 'react'
 import { voeApi, ApiError } from '../lib/apiClient'
@@ -28,6 +28,7 @@ import { buildActivityDatePresets, formatRelativeLabel } from '../lib/activityDa
 import type { VariableContext } from '../lib/messageVariables'
 import { WhatsAppWhenPicker } from './WhatsAppWhenPicker'
 import { WhatsAppConfigSection, WhatsAppScheduleSummary, useWhatsAppActivityForm } from './WhatsAppActivitySection'
+import { WhatsAppTrackBuilder } from './WhatsAppTrackBuilder'
 import {
   XIcon, CheckSquareIcon, MessageCircleIcon, PhoneCallIcon, MailIcon,
   UsersIcon, MapPinIcon, CalendarIcon, SendIcon, GitBranchIcon, AlertIcon,
@@ -87,6 +88,9 @@ export function NewActivityModal({
   const [dateError, setDateError] = useState(false)
   const [pastDateError, setPastDateError] = useState(false)
   const [contactError, setContactError] = useState(false)
+  // Trilha de WhatsApp: troca o corpo do modal pelo construtor; "Cancelar"
+  // lá volta pra cá sem perder o que já tinha sido preenchido.
+  const [showTrackBuilder, setShowTrackBuilder] = useState(false)
 
   const { users } = useWorkspaceUsers()
   const isWhatsApp = type === 'whatsapp'
@@ -205,13 +209,23 @@ export function NewActivityModal({
     <div className="activity-modal-backdrop" onClick={onClose}>
       <div className="activity-modal" onClick={e => e.stopPropagation()}>
         <div className="activity-modal-header">
-          <h3>Nova Atividade</h3>
+          <h3>{showTrackBuilder ? 'Nova trilha de WhatsApp' : 'Nova Atividade'}</h3>
           <button type="button" className="activity-modal-close" onClick={onClose} aria-label="Fechar">
             <XIcon size={16} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="activity-modal-body">
+        {showTrackBuilder && (
+          <WhatsAppTrackBuilder
+            opportunityId={opportunityId}
+            contactId={contactId}
+            variableContext={variableContext}
+            onCancel={() => setShowTrackBuilder(false)}
+            onCreated={() => { onCreated(); onClose() }}
+          />
+        )}
+
+        <form onSubmit={handleSubmit} className="activity-modal-body" hidden={showTrackBuilder}>
           <div>
             <label className="form-label-standalone">Tipo</label>
             <div className="activity-type-grid">
@@ -242,13 +256,14 @@ export function NewActivityModal({
                   <span className="wa-mode-sub">Uma mensagem única</span>
                 </span>
               </div>
-              <button type="button" className="wa-mode-card" disabled title="Em breve na extensão">
+              <button type="button" className="wa-mode-card" disabled={!contactId}
+                title={!contactId ? 'Vincule um contato para habilitar a trilha' : undefined}
+                onClick={() => setShowTrackBuilder(true)}>
                 <span className="wa-mode-icon is-green"><GitBranchIcon size={15} /></span>
                 <span>
                   <span className="wa-mode-title">Trilha de WhatsApp</span>
                   <span className="wa-mode-sub">Várias mensagens agendadas</span>
                 </span>
-                <span className="activity-type-badge">Em breve</span>
               </button>
             </div>
           )}
