@@ -160,6 +160,10 @@ export function SelectFieldRow({
         onChange={e => onSave(e.target.value || null)}
       >
         <option value="">{placeholder}</option>
+        {/* Valor salvo que não está (mais) entre as opções — ex.: opção
+            renomeada/removida no dashboard. Sem isso o <select> cai no
+            placeholder e parece vazio. */}
+        {value && !options.includes(value) && <option value={value}>{value}</option>}
         {options.map(opt => (
           <option key={opt} value={opt}>{opt}</option>
         ))}

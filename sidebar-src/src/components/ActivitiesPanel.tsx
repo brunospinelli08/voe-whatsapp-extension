@@ -1,21 +1,16 @@
 // ActivitiesPanel.tsx
-// Aba "Atividades" — lista as atividades já registradas na oportunidade
-// (mesma tabela/nomenclatura do dashboard real, ver ActivityCard.tsx em
-// app.voeops.com) + "+ Nova atividade", que abre o NewActivityModal.tsx
-// (réplica do ActivityModal.tsx real). Estado vazio (ícone + texto +
-// botão) espelha exatamente o `panelTab === 1` de inbox/page.tsx.
-//
-// "Cancelar"/"Enviar agora" (fase 4 do agendamento de mensagens) — só pra
-// atividades WhatsApp ainda agendadas (`type === 'whatsapp' && status ===
-// 'agendada'`). Escopo deliberadamente restrito a isso: o resto do CRUD de
-// atividades (concluir tarefa, reagendar, reabrir cancelada — tudo que
-// existe em useNewActivities.ts no dashboard) fica de fora, não fazia
-// parte do pedido de agendamento de mensagens.
+// Aba "Atividades" — espelha o `panelTab === 1` de inbox/page.tsx do
+// dashboard: atividades agendadas no topo (ActivityCard compacto), as
+// demais colapsadas em "N concluída(s)", e "+ Nova atividade" no fim, que
+// abre o NewActivityModal.tsx (réplica do ActivityModal.tsx real).
+// Ações dos cards = handleActivityAction do Inbox (concluir, cancelar,
+// reativar, enviar agora) + adiar/excluir.
 
 import { useState } from 'react'
 import { useActivities } from '../hooks/useActivities'
+import { ActivityCard, type ActivityAction } from './ActivityCard'
 import { NewActivityModal } from './NewActivityModal'
-import { CalendarClockIcon, ClockIcon, PlusIcon, XIcon } from './Icons'
+import { CalendarClockIcon, PlusIcon } from './Icons'
 import { Spinner } from './Spinner'
 
 interface Props {
@@ -25,65 +20,34 @@ interface Props {
   contactName: string | null
 }
 
-const TYPE_LABELS: Record<string, string> = {
-  task: 'Tarefa',
-  whatsapp: 'WhatsApp',
-  call: 'Ligação',
-  email: 'E-mail',
-  meeting: 'Reunião',
-  visit: 'Visita',
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  agendada: 'Agendada',
-  concluida: 'Concluída',
-  cancelada: 'Cancelada',
-  // "pending" é o default legado da coluna no banco — não deveria aparecer
-  // em atividades novas (o modal sempre manda status: "agendada" agora),
-  // mas atividades antigas criadas antes dessa correção ainda têm isso.
-  pending: 'Pendente',
-  paused: 'Pausada',
-}
-
-function formatWhen(dueDate: string | null, dueTime: string | null) {
-  if (!dueDate) return null
-  const date = new Date(`${dueDate.substring(0, 10)}T00:00:00`)
-  const formatted = date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })
-  return dueTime ? `${formatted} · ${dueTime.substring(0, 5)}` : formatted
-}
-
 export function ActivitiesPanel({ opportunityId, opportunityName, contactId, contactName }: Props) {
-  const { activities, loading, error, refetch, cancelActivity, sendNowActivity } = useActivities(opportunityId)
+  const {
+    activities, loading, error, refetch,
+    completeActivity, cancelActivity, reactivateActivity, postponeActivity, deleteActivity, sendNowActivity,
+  } = useActivities(opportunityId)
   const [showModal, setShowModal] = useState(false)
-  const [actingId, setActingId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
-  async function handleCancel(id: string) {
-    if (!window.confirm('Cancelar essa mensagem agendada? Ela não será enviada.')) return
-    setActingId(id)
+  async function guarded(fn: () => Promise<void>) {
     setActionError(null)
     try {
-      await cancelActivity(id)
+      await fn()
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Erro ao cancelar')
-    } finally {
-      setActingId(null)
+      setActionError(err instanceof Error ? err.message : 'Erro ao atualizar atividade')
+      refetch()
     }
   }
 
-  async function handleSendNow(id: string) {
-    setActingId(id)
-    setActionError(null)
-    try {
-      await sendNowActivity(id)
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Erro ao enviar agora')
-    } finally {
-      setActingId(null)
+  const handleAction = (id: string, action: ActivityAction, result?: string) => guarded(async () => {
+    switch (action) {
+      case 'complete': await completeActivity(id, result ?? 'feita'); break
+      case 'cancel': await cancelActivity(id); break
+      case 'reactivate': await reactivateActivity(id); break
+      case 'send_now': await sendNowActivity(id); break
     }
-  }
+  })
 
-  if (loading) return <Spinner label="Carregando atividades…" />
+  if (loading && activities.length === 0) return <Spinner label="Carregando atividades…" />
 
   if (error) {
     return (
@@ -94,12 +58,11 @@ export function ActivitiesPanel({ opportunityId, opportunityName, contactId, con
     )
   }
 
+  const pending = activities.filter(a => a.status === 'agendada')
+  const done = activities.filter(a => a.status !== 'agendada')
+
   return (
     <div className="activities-panel">
-      <button className="new-activity-btn" onClick={() => setShowModal(true)}>
-        <PlusIcon size={12} /> Nova atividade
-      </button>
-
       {activities.length === 0 && (
         <div className="activities-empty-state">
           <CalendarClockIcon size={28} className="activities-empty-icon" />
@@ -107,39 +70,25 @@ export function ActivitiesPanel({ opportunityId, opportunityName, contactId, con
         </div>
       )}
 
-      {activities.length > 0 && (
-        <ul className="activities-list">
-          {activities.map(activity => (
-            <li key={activity.id} className="activity-item">
-              <div className="activity-item-header">
-                <span className="activity-type-badge">{TYPE_LABELS[activity.type] ?? activity.type}</span>
-                <span className="muted">{STATUS_LABELS[activity.status] ?? activity.status}</span>
-              </div>
-              {activity.title && <p className="activity-title">{activity.title}</p>}
-              {formatWhen(activity.due_date, activity.due_time) && (
-                <p className="muted">{formatWhen(activity.due_date, activity.due_time)}</p>
-              )}
-              {activity.type === 'whatsapp' && activity.status === 'agendada' && (
-                <div className="activity-item-actions">
-                  <button
-                    className="link-button"
-                    disabled={actingId === activity.id}
-                    onClick={() => handleSendNow(activity.id)}
-                  >
-                    <ClockIcon size={10} /> Enviar agora
-                  </button>
-                  <button
-                    className="link-button activity-cancel-btn"
-                    disabled={actingId === activity.id}
-                    onClick={() => handleCancel(activity.id)}
-                  >
-                    <XIcon size={10} /> Cancelar
-                  </button>
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
+      {pending.map(activity => (
+        <ActivityCard
+          key={activity.id}
+          activity={activity}
+          onAction={handleAction}
+          onPostpone={(id, d, t) => guarded(() => postponeActivity(id, d, t))}
+          onDelete={id => guarded(() => deleteActivity(id))}
+        />
+      ))}
+
+      {done.length > 0 && (
+        <details className="activities-done">
+          <summary>{done.length} concluída{done.length > 1 ? 's' : ''}</summary>
+          <div className="activities-done-list">
+            {done.map(activity => (
+              <ActivityCard key={activity.id} activity={activity} onAction={handleAction} />
+            ))}
+          </div>
+        </details>
       )}
 
       {actionError && (
@@ -148,6 +97,10 @@ export function ActivitiesPanel({ opportunityId, opportunityName, contactId, con
           <span>{actionError}</span>
         </div>
       )}
+
+      <button className="new-activity-btn" onClick={() => setShowModal(true)}>
+        <PlusIcon size={12} /> Nova atividade
+      </button>
 
       {showModal && (
         <NewActivityModal

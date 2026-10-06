@@ -29,6 +29,10 @@ export interface OpportunityDetail {
   lost_reason: string | null
   paused_reason: string | null
   segment_data: Record<string, string | string[] | boolean>
+  /** false quando a API não devolveu segment_data (versão antiga do
+   * GET /api/v1/opportunities/:id) — aí não dá pra editar um campo sem
+   * apagar os outros, já que o PUT regrava o JSON inteiro. */
+  segment_data_loaded: boolean
   unit_id: string | null
   pipeline: { id: string; name: string } | null
   stage: { id: string; name: string; color: string; order: number } | null
@@ -73,7 +77,12 @@ export function useOpportunityDetail(opportunityId: string | null) {
         oppCacheKey(opportunityId),
         async () => {
           const res = await voeApi.get<{ data: OpportunityDetail }>(`/api/v1/opportunities/${opportunityId}`)
-          return { ...res.data, segment_data: res.data.segment_data ?? {}, unit_id: res.data.unit_id ?? null }
+          return {
+            ...res.data,
+            segment_data: res.data.segment_data ?? {},
+            segment_data_loaded: res.data.segment_data != null,
+            unit_id: res.data.unit_id ?? null,
+          }
         },
         OPP_CACHE_TTL,
       )
@@ -122,6 +131,10 @@ export function useOpportunityDetail(opportunityId: string | null) {
   const patchSegmentField = useCallback(
     async (key: string, value: string | string[] | boolean) => {
       if (!opportunityId || !detail) return
+      if (!detail.segment_data_loaded) {
+        setError('Não foi possível carregar os campos do segmento. Atualize e tente de novo.')
+        return
+      }
       const nextSegmentData = { ...detail.segment_data, [key]: value }
       setDetail(prev => (prev ? { ...prev, segment_data: nextSegmentData } : prev))
       invalidateCache(oppCacheKey(opportunityId))
