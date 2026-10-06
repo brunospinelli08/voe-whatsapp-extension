@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "VOE — Atendimento WhatsApp",
   "description": "Painel de atendimento da VOE no WhatsApp Web. Fallback para quando a conexão principal do módulo Conversas estiver indisponível.",
-  "version": "1.2.0",
+  "version": "1.3.0",
 
   "action": {
     "default_icon": {
@@ -25,13 +25,11 @@
   "host_permissions": [
     "https://web.whatsapp.com/*",
     "https://app.voeops.com/*",
-    "https://yjlogamiqdksvceiyfte.supabase.co/*",
-    "https://localhost:5173/*"
+    "https://yjlogamiqdksvceiyfte.supabase.co/*"
   ],
 
   "permissions": [
-    "storage",
-    "tabs"
+    "storage"
   ],
 
   "content_scripts": [
@@ -50,7 +48,7 @@
         "extension/wa-js-bridge.js",
         "extension/wa-overrides.css"
       ],
-      "matches": ["<all_urls>"]
+      "matches": ["https://web.whatsapp.com/*"]
     }
   ]
 }
