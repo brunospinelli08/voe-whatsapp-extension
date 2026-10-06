@@ -1,5 +1,27 @@
 # voe-whatsapp-extension
 
+## Versão 1.3.0 — Atividades e agendamento de WhatsApp iguais à VOE
+
+- Aba Atividades com os mesmos cards do Inbox: concluir/registrar resultado,
+  cancelar, adiar, excluir, enviar agora e **reativar** agendamentos.
+- Nova Atividade → WhatsApp no mesmo fluxo do dashboard: canais em cards,
+  templates aprovados da API Oficial (com variáveis e preview), Central de
+  Mensagens com variáveis `{{...}}`, anexo de arquivo, pausar se o contato
+  responder e resumo do agendamento.
+- Campos de segmento (ex.: Segmento, Faturamento) carregam o valor salvo.
+- Manifest: sem a permissão `tabs` e sem host de desenvolvimento; os
+  recursos expostos à página ficam restritos ao `web.whatsapp.com`.
+
+Requer a API da VOE com `GET /api/v1/wa-templates` e `segment_data` em
+`GET /api/v1/opportunities/:id` (em produção desde 06/10/2026).
+
+Pacote para a Chrome Web Store: `git archive --format=zip -o voe-whatsapp-extension-v<versão>.zip HEAD manifest.json extension icons sidebar`
+(gera só os arquivos versionados, com caminhos no formato que a loja aceita).
+
+## Versão 1.2.0 — Central de Mensagens e mídias
+
+Veja a seção abaixo, "Central de Mensagens — experiência junto da conversa".
+
 ## Versão 1.1.1 — ajustes visuais
 
 - Painel alinhado ao visual do Inbox, com campos e navegação compactos.

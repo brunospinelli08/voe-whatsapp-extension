@@ -2,3 +2,4 @@ node_modules/
 sidebar-src/dist/
 .DS_Store
 tsconfig.tsbuildinfo
+*.zip

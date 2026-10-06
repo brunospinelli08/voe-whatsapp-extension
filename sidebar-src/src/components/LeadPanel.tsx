@@ -214,6 +214,9 @@ export function LeadPanel({ chat, userId, workspaceId, onContactContextChange }:
                   opportunityName={opportunity.name}
                   contactId={contact?.id ?? null}
                   contactName={contact?.name ?? null}
+                  contactPhone={contact?.phone ?? null}
+                  contactEmail={contact?.email ?? null}
+                  companyName={contact?.company?.name ?? null}
                 />
               )}
             </div>
