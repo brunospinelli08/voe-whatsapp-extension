@@ -18,9 +18,12 @@ interface Props {
   opportunityName: string
   contactId: string | null
   contactName: string | null
+  contactPhone?: string | null
+  contactEmail?: string | null
+  companyName?: string | null
 }
 
-export function ActivitiesPanel({ opportunityId, opportunityName, contactId, contactName }: Props) {
+export function ActivitiesPanel({ opportunityId, opportunityName, contactId, contactName, contactPhone, contactEmail, companyName }: Props) {
   const {
     activities, loading, error, refetch,
     completeActivity, cancelActivity, reactivateActivity, postponeActivity, deleteActivity, sendNowActivity,
@@ -108,6 +111,9 @@ export function ActivitiesPanel({ opportunityId, opportunityName, contactId, con
           opportunityName={opportunityName}
           contactId={contactId}
           contactName={contactName}
+          contactPhone={contactPhone}
+          contactEmail={contactEmail}
+          companyName={companyName}
           onClose={() => setShowModal(false)}
           onCreated={refetch}
         />
